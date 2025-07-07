@@ -1,0 +1,54 @@
+// 3-Clause BSD license
+/*-
+*Copyright (C) 2019-2020 Intel Corporation
+*SPDX-License-Identifier: BSD-3-Clause
+ */
+#ifndef _IFC_STATUS_H_
+#define _IFC_STATUS_H_
+
+/* Error Codes */
+enum ifc_status {
+	IFC_SUCCESS				= 0,
+
+	/* Generic codes : Range -1..-49 */
+	IFC_ERR_PARAM				= -1,
+	IFC_ERR_INVALID_ARGUMENT		= -2,
+	IFC_ERR_FW_CMD_TRUNCATED		= -3,
+	IFC_ERR_BAD_CONFIG			= -4,
+	IFC_ERR_OP_FAILED			= -5,
+	IFC_ERR_MAP_FAILED			= -6,
+	IFC_ERR_NO_MEMORY			= -11,
+	IFC_ERR_LOCKID_FAILURE			= -12,
+	IFC_ERR_OUT_OF_RANGE			= -13,
+	IFC_ERR_LOCKED				= -14,
+	IFC_ERR_LOCK_FAILURE			= -15,
+	IFC_ERR_NOT_IMPLEMENTED			= -16,
+
+	/* Message specific error codes. Range -100..-109 */
+	IFC_ERR_PKT_TOO_SMALL			= -100,
+	IFC_ERR_MSG_TYPE_INVALID		= -101,
+	IFC_ERR_MSG_NO_MORE			= -102,
+	IFC_ERR_MSGQ_EMPTY			= -102,
+	IFC_ERR_MSGQ_FULL			= -103,
+
+	/* FW command specific error codes. Range -120..-129 */
+	IFC_ERR_HOST_INTERFACE_COMMAND		= -120,
+	IFC_ERR_FW_CMD_STATUS			= -121,
+	IFC_ERR_FW_CMD_TIMEOUT			= -122,
+	IFC_ERR_FW_CMD_BAD_ECHO			= -128,
+	IFC_FLOW_HANDLE_TOUT			= -129,
+	IFC_FT_ERROR_CMD_TOUT			= -130,
+	IFC_ERR_FLOW_INSERT_FAILED		= -131,
+	IFC_ERR_DUMMY_KEY_RECIRC		= -132,
+
+	IFC_ERR_INSERT_ROW_FULL			= -133,
+	IFC_ERR_INSERT_REHASH_FAIL		= -134,
+	IFC_ERR_INSERT_KEY_EXISTS		= -135,
+	IFC_ERR_INSERT_NO_FREE_PTR		= -136,
+	IFC_ERR_INSERT_TABLE_FULL		= -137,
+	IFC_ERR_KEY_NOT_EXIST			= -138,
+	IFC_ERR_DELETE_NEXTPTR_ERROR		= -139,
+	IFC_ERR_FLOW_DELETE_FAILED		= -140,
+};
+
+#endif /* _IFC_STATUS_H_ */

@@ -1,0 +1,53 @@
+From 9ddf46c5ee19f34ca30b7b992fa5b2f536fff2ae Mon Sep 17 00:00:00 2001
+From: Patkar Rutuparna <rutuparnax.patkar@intel.com>
+Date: Tue, 20 Apr 2021 19:17:19 -0400
+Subject: [PATCH 5/7] mcdma: Patch to enable SRIOV with igb_uio driver
+
+This patch includes code changes to enable SRIOV functionality with
+igb_uio driver and to create VF's on PF.
+
+Title: mcdma: Patch to enable SRIOV with igb_uio driver
+Signed-off-by: Sandhya Rani, GuttiX Reddy
+<guttix.reddy.sandhya.rani@intel.com>
+---
+ kernel/linux/igb_uio/igb_uio.c | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/kernel/linux/igb_uio/igb_uio.c b/kernel/linux/igb_uio/igb_uio.c
+index 1a2e0c2..5987956 100644
+--- a/kernel/linux/igb_uio/igb_uio.c
++++ b/kernel/linux/igb_uio/igb_uio.c
+@@ -69,6 +69,22 @@ struct rte_uio_pci_dev {
+ #endif
+ 
+ /* sriov sysfs */
++static int igbuio_pci_sriov_configure(struct pci_dev *dev, int vfs)
++{
++	int rc = 0;
++
++	if (!pci_sriov_get_totalvfs(dev))
++		return -EINVAL;
++
++	if (!vfs)
++		pci_disable_sriov(dev);
++	else if (!pci_num_vf(dev))
++		rc = pci_enable_sriov(dev, vfs);
++	else /* do nothing if change vfs number */
++		rc = -EINVAL;
++	return rc;
++}
++
+ static ssize_t
+ show_max_vfs(struct device *dev, struct device_attribute *attr,
+ 	     char *buf)
+@@ -876,6 +892,7 @@ static int set_irq_eventfd(struct rte_uio_pci_dev *udev, u32 vec, int efd)
+ 	.id_table = NULL,
+ 	.probe = igbuio_pci_probe,
+ 	.remove = igbuio_pci_remove,
++	.sriov_configure = igbuio_pci_sriov_configure,
+ };
+ 
+ static int __init
+-- 
+1.8.3.1
+

@@ -1,0 +1,509 @@
+From da9afbd5c4d5cc1edcd7a9149c4dcfc10704db6c Mon Sep 17 00:00:00 2001
+From: "Pottimurthy, Sathya Narayana" <sathya.narayana.pottimurthy@intel.com>
+Date: Tue, 1 Jun 2021 07:56:26 -0400
+Subject: [PATCH 3/7] mcdma: dpdk - msix patch to igb_uio
+
+This patch contains changes to support MSIX
+with igb_uio.
+
+Title: mcdma: msix patch to igb_uio
+Signed-off-by: Pottimurthy, Sathya Narayana
+---
+ kernel/linux/igb_uio/Makefile  |   2 +-
+ kernel/linux/igb_uio/igb_uio.c | 330 ++++++++++++++++++++++++++++++++++++-----
+ 2 files changed, 296 insertions(+), 36 deletions(-)
+
+diff --git a/kernel/linux/igb_uio/Makefile b/kernel/linux/igb_uio/Makefile
+index f83bcc7..6019647 100644
+--- a/kernel/linux/igb_uio/Makefile
++++ b/kernel/linux/igb_uio/Makefile
+@@ -14,7 +14,7 @@ MODULE_PATH = drivers/net/igb_uio
+ #
+ MODULE_CFLAGS += -I$(SRCDIR) --param max-inline-insns-single=100
+ MODULE_CFLAGS += -I$(RTE_OUTPUT)/include
+-MODULE_CFLAGS += -Winline -Wall -Werror
++MODULE_CFLAGS += -Wno-inline -Wall -Werror
+ MODULE_CFLAGS += -include $(RTE_OUTPUT)/include/rte_config.h
+ 
+ #
+diff --git a/kernel/linux/igb_uio/igb_uio.c b/kernel/linux/igb_uio/igb_uio.c
+index 039f5a5..6e27320 100644
+--- a/kernel/linux/igb_uio/igb_uio.c
++++ b/kernel/linux/igb_uio/igb_uio.c
+@@ -13,12 +13,40 @@
+ #include <linux/irq.h>
+ #include <linux/msi.h>
+ #include <linux/version.h>
++#include <linux/uaccess.h>
++#include <linux/eventfd.h>
++#include <linux/rcupdate.h>
+ #include <linux/slab.h>
+ 
+ #include <rte_pci_dev_features.h>
++#include "../../../drivers/net/mcdma/base/mcdma_ip_params.h"
+ 
+ #include "compat.h"
+ 
++#define MAX_MSIX_INTR 512
++#define MSIX_CAPACITY 2048
++#define MSIX_INTR_CTX_BAR 2
++#define MSIX_INTR_CTX_ADDR 0x0000
++#define MSIX_CH_NO_MASK 0xFFF00000
++#define MSIX_IRQFD_MASK 0xFFFFF
++#define MSIX_IRQFD_BITS 20
++struct msix_intr_info {
++	uint32_t valid;
++	uint32_t efd;
++	uint32_t msix_allocated;
++};
++
++struct msix_info {
++        u32 nvectors;
++        u32 evectors; // enabled vector count
++        struct msix_entry *table;
++        struct msix_intr_info msix_info[MSIX_CAPACITY];
++        struct uio_msix_irq_ctx {
++                struct eventfd_ctx *trigger;
++                char *name;
++        } *ctx;
++};
++
+ /**
+  * A structure describing the private information for a uio device.
+  */
+@@ -27,11 +55,19 @@ struct rte_uio_pci_dev {
+ 	struct pci_dev *pdev;
+ 	enum rte_intr_mode mode;
+ 	atomic_t refcnt;
++	struct mutex msix_state_lock;
++	struct msix_info msix;
+ };
+ 
+ static int wc_activate;
+ static char *intr_mode;
+ static enum rte_intr_mode igbuio_intr_mode_preferred = RTE_INTR_MODE_MSIX;
++#ifdef IFC_QDMA_MSIX_ENABLE
++#ifdef IFC_QDMA_DYN_CHAN
++static int igbuio_pci_reset_msix(struct rte_uio_pci_dev *udev, int vectors);
++#endif
++#endif
++
+ /* sriov sysfs */
+ static ssize_t
+ show_max_vfs(struct device *dev, struct device_attribute *attr,
+@@ -73,6 +109,7 @@ struct rte_uio_pci_dev {
+ };
+ 
+ #ifndef HAVE_PCI_MSI_MASK_IRQ
++#ifdef IFC_QDMA_MSIX_ENABLE
+ /*
+  * It masks the msix on/off of generating MSI-X messages.
+  */
+@@ -94,10 +131,12 @@ struct rte_uio_pci_dev {
+ 		desc->masked = mask_bits;
+ 	}
+ }
++#endif
+ 
+ /*
+  * It masks the msi on/off of generating MSI messages.
+  */
++#ifdef IFC_QDMA_MSIX_ENABLE
+ static void
+ igbuio_msi_mask_irq(struct pci_dev *pdev, struct msi_desc *desc, int32_t state)
+ {
+@@ -140,6 +179,108 @@ struct rte_uio_pci_dev {
+ 	}
+ }
+ #endif
++#endif
++
++/*
++ * Disable the IRQ once received the interrupt
++ * user space responsible to acknowledge
++ */
++static irqreturn_t ifc_uio_irq_handler(int irq, void *arg)
++{
++	struct eventfd_ctx *trigger = arg;
++	if (trigger)
++		eventfd_signal(trigger, 1);
++	return IRQ_HANDLED;
++}
++
++
++/* set the mapping between vector # and existing eventfd. */
++static int set_irq_eventfd(struct rte_uio_pci_dev *udev, u32 vec, int efd)
++{
++	struct uio_msix_irq_ctx *ctx;
++	struct eventfd_ctx *trigger;
++	int irq, err, vectors;
++
++	if (udev == NULL) {
++		pr_err("udev is null\n");
++		return -1;
++	}
++
++        vectors = pci_msix_vec_count(udev->pdev);
++        if(vectors < 0){
++                pr_err("failed while setting up eventfd\n");
++                return -1;
++        }
++
++	if (vec >= vectors) {
++		pr_err("vec %u >= num_vec %u\n",
++			vec, udev->msix.nvectors);
++		return -ERANGE;
++	}
++
++	irq = udev->msix.table[vec].vector;
++
++	ctx = &udev->msix.ctx[vec];
++	if (ctx == NULL)
++		return 0;
++
++	if (ctx && ctx->trigger && udev->msix.msix_info[vec].msix_allocated) {
++		free_irq(irq, ctx->trigger);
++		eventfd_ctx_put(ctx->trigger);
++	        udev->msix.msix_info[vec].msix_allocated = false;
++		ctx->trigger = NULL;
++	}
++
++	if (efd < 0)
++		return 0;
++
++	trigger = eventfd_ctx_fdget(efd);
++	if (IS_ERR(trigger)) {
++		err = PTR_ERR(trigger);
++		pr_err("eventfd ctx get failed: err:%d efd:%u\n", err, efd);
++		return err;
++	}
++
++	err = request_irq(irq, ifc_uio_irq_handler, udev->info.irq_flags, ctx->name, trigger);
++	if (err) {
++		eventfd_ctx_put(trigger);
++		return err;
++	}
++#ifdef __INTEL__DEBUG_CHK
++	pr_err("eventfd ctx registration done: efd:%u vec:%u irq:%u\n", efd, vec, irq);
++#endif
++
++	udev->msix.msix_info[vec].msix_allocated = true;
++	ctx->trigger = trigger;
++
++	return 0;
++}
++
++#ifdef IFC_QDMA_MSIX_ENABLE
++#ifdef IFC_QDMA_DYN_CHAN
++static int
++igbuio_pci_dca_irqcontrol(struct uio_info *info, s32 irq_state)
++{
++	struct rte_uio_pci_dev *udev = info->priv;
++	uint32_t msix_num;
++        int irqfd, err;
++
++	msix_num = ((irq_state & MSIX_CH_NO_MASK) >> MSIX_IRQFD_BITS);
++	irqfd = (irq_state & MSIX_IRQFD_MASK);
++
++	if (irqfd == MSIX_IRQFD_MASK) {
++		err = igbuio_pci_reset_msix(udev, udev->msix.evectors);
++		if (err < 0)
++			pr_err("msix enablement failed %u\n",err);
++	} else {
++		udev->msix.msix_info[msix_num].valid = 1;
++		udev->msix.msix_info[msix_num].efd = irqfd;
++		udev->msix.evectors++;
++	}
++	return err;
++}
++#endif
++#endif
+ 
+ /**
+  * This is the irqcontrol callback to be registered to uio_info.
+@@ -158,12 +299,27 @@ struct rte_uio_pci_dev {
+ igbuio_pci_irqcontrol(struct uio_info *info, s32 irq_state)
+ {
+ 	struct rte_uio_pci_dev *udev = info->priv;
+-	struct pci_dev *pdev = udev->pdev;
++#ifdef IFC_QDMA_MSIX_ENABLE
++	struct pci_dev *pdev;
++#endif
++	uint32_t msix_num;
++        int irqfd, err;
++
++#ifdef IFC_QDMA_MSIX_ENABLE
++#ifdef IFC_QDMA_DYN_CHAN
++	err = igbuio_pci_dca_irqcontrol(info, irq_state);
++	if (err < 0) {
++		pr_err("DCA IRQ enablement failed\n");
++		return -1;
++	}
++	return 0;
++#endif
+ 
+ #ifdef HAVE_PCI_MSI_MASK_IRQ
+-	struct irq_data *irq = irq_get_irq_data(udev->info.irq);
++	struct irq_data *irq;
++	irq = irq_get_irq_data(udev->info.irq);
+ #endif
+-
++	pdev = udev->pdev;
+ 	pci_cfg_access_lock(pdev);
+ 
+ 	if (udev->mode == RTE_INTR_MODE_MSIX || udev->mode == RTE_INTR_MODE_MSI) {
+@@ -176,15 +332,25 @@ struct rte_uio_pci_dev {
+ 		igbuio_mask_irq(pdev, udev->mode, irq_state);
+ #endif
+ 	}
+-
+ 	if (udev->mode == RTE_INTR_MODE_LEGACY)
+ 		pci_intx(pdev, !!irq_state);
+ 
+ 	pci_cfg_access_unlock(pdev);
++#endif
++
++        msix_num = ((irq_state & MSIX_CH_NO_MASK) >> MSIX_IRQFD_BITS);
++        irqfd = (irq_state & MSIX_IRQFD_MASK);
++
++	mutex_lock(&udev->msix_state_lock);
++	err = set_irq_eventfd(udev, msix_num, (int)irqfd);
++	if (err < 0)
++		pr_err("msix registration failed %u\n",msix_num);
++	mutex_unlock(&udev->msix_state_lock);
+ 
+ 	return 0;
+ }
+ 
++#if 0
+ /**
+  * This is interrupt handler which will check if the interrupt is for the right device.
+  * If yes, disable it here and will be enable later.
+@@ -205,24 +371,51 @@ struct rte_uio_pci_dev {
+ 	/* Message signal mode, no share IRQ and automasked */
+ 	return IRQ_HANDLED;
+ }
++#endif
+ 
++#ifdef IFC_QDMA_MSIX_ENABLE
+ static int
+-igbuio_pci_enable_interrupts(struct rte_uio_pci_dev *udev)
++igbuio_pci_enable_interrupts(struct rte_uio_pci_dev *udev, int vectors)
+ {
+-	int err = 0;
+-#ifndef HAVE_ALLOC_IRQ_VECTORS
+-	struct msix_entry msix_entry;
+-#endif
++        int err = 0;
++        int i = 0, nvectors;
++        struct pci_dev *pdev = udev->pdev;
++        udev->info.irq_flags = (IRQF_NO_THREAD | IRQF_NOBALANCING | IRQF_ONESHOT | IRQF_IRQPOLL);
++
++        nvectors = pci_msix_vec_count(udev->pdev);
++        if(nvectors < 0){
++                pr_err("failed while enabling getting vectors\n");
++                return -1;
++        }
++
++        udev->msix.nvectors = vectors;
++        udev->msix.table = kcalloc(vectors, sizeof(struct msix_entry),
++                                   GFP_KERNEL);
++        if (!udev->msix.table) {
++                pr_err("failed to allocate memory for MSI-X table");
++                goto err_ctx_alloc;
++        }
++
++        udev->msix.ctx = kcalloc(vectors, sizeof(struct uio_msix_irq_ctx),
++                                 GFP_KERNEL);
++
++        for (i = 0; i < vectors; i++) {
++                udev->msix.table[i].entry = i;
++                udev->msix.ctx[i].name = kasprintf(GFP_KERNEL,
++                                                   KBUILD_MODNAME "[%d](%s)",
++                                                   i, pci_name(pdev));
++                if (!udev->msix.ctx[i].name)
++                        goto err_name_alloc;
++        }
+ 
+ 	switch (igbuio_intr_mode_preferred) {
+ 	case RTE_INTR_MODE_MSIX:
+ 		/* Only 1 msi-x vector needed */
+ #ifndef HAVE_ALLOC_IRQ_VECTORS
+-		msix_entry.entry = 0;
+-		if (pci_enable_msix(udev->pdev, &msix_entry, 1) == 0) {
++		if (pci_enable_msix(udev->pdev, udev->msix.table, vectors) == 0) {
+ 			dev_dbg(&udev->pdev->dev, "using MSI-X");
+ 			udev->info.irq_flags = IRQF_NO_THREAD;
+-			udev->info.irq = msix_entry.vector;
++			udev->info.irq = 1;
+ 			udev->mode = RTE_INTR_MODE_MSIX;
+ 			break;
+ 		}
+@@ -278,24 +471,44 @@ struct rte_uio_pci_dev {
+ 		err = -EINVAL;
+ 	}
+ 
+-	if (udev->info.irq != UIO_IRQ_NONE)
+-		err = request_irq(udev->info.irq, igbuio_pci_irqhandler,
+-				  udev->info.irq_flags, udev->info.name,
+-				  udev);
+ 	dev_info(&udev->pdev->dev, "uio device registered with irq %ld\n",
+ 		 udev->info.irq);
+ 
+ 	return err;
++
++err_name_alloc:
++        for (i = 0; i < vectors; i++)
++                kfree(udev->msix.ctx[i].name);
++
++        kfree(udev->msix.ctx);
++err_ctx_alloc:
++        kfree(udev->msix.table);
++        return false;
+ }
+ 
+ static void
+ igbuio_pci_disable_interrupts(struct rte_uio_pci_dev *udev)
+ {
+-	if (udev->info.irq) {
+-		free_irq(udev->info.irq, udev);
+-		udev->info.irq = 0;
++	int vectors;
++	int i;
++
++	vectors = pci_msix_vec_count(udev->pdev);
++	if(vectors < 0){
++		pr_err("Failed while getting vectors\n");
++		return;
++	}
++#ifdef IFC_QDMA_DYN_CHAN
++	vectors = udev->msix.evectors;
++#endif
++	for (i = 0; i < vectors; i++) {
++		if (udev->msix.ctx[i].trigger)
++			set_irq_eventfd(udev, i, -1);
++		kfree(udev->msix.ctx[i].name);
++		udev->msix.msix_info[i].valid = 0;
++		udev->msix.msix_info[i].efd = 0;
+ 	}
+ 
++	udev->info.irq = 0;
+ #ifndef HAVE_ALLOC_IRQ_VECTORS
+ 	if (udev->mode == RTE_INTR_MODE_MSIX)
+ 		pci_disable_msix(udev->pdev);
+@@ -306,7 +519,38 @@ struct rte_uio_pci_dev {
+ 	    udev->mode == RTE_INTR_MODE_MSI)
+ 		pci_free_irq_vectors(udev->pdev);
+ #endif
++#ifdef IFC_QDMA_DYN_CHAN
++	udev->msix.evectors = 0;
++#endif
++	dev_info(&udev->pdev->dev, "uio device unregistered with irq %ld\n",
++		 udev->info.irq);
++}
++
++#ifdef IFC_QDMA_DYN_CHAN
++static int
++igbuio_pci_reset_msix(struct rte_uio_pci_dev *udev, int vectors)
++{
++	int err;
++	int i = 0;
++
++	struct pci_dev *dev = udev->pdev;
++
++	err = igbuio_pci_enable_interrupts(udev, vectors);
++	if (err) {
++		dev_err(&dev->dev, "Enable interrupt fails\n");
++	}
++
++	for (i = 0; i < MSIX_CAPACITY; i++) {
++		if (udev->msix.msix_info[i].valid) {
++			mutex_lock(&udev->msix_state_lock);
++			set_irq_eventfd(udev, i, udev->msix.msix_info[i].efd);
++			mutex_unlock(&udev->msix_state_lock);
++		}
++	}
++	return 0;
+ }
++#endif//IFC_QDMA_DYN_CHAN
++#endif
+ 
+ 
+ /**
+@@ -317,19 +561,35 @@ struct rte_uio_pci_dev {
+ {
+ 	struct rte_uio_pci_dev *udev = info->priv;
+ 	struct pci_dev *dev = udev->pdev;
+-	int err;
+-
+-	if (atomic_inc_return(&udev->refcnt) != 1)
+-		return 0;
++	int err = 0;
++#ifdef IFC_QDMA_MSIX_ENABLE
++#ifndef IFC_QDMA_DYN_CHAN
++	uint32_t vectors;
++#endif
++#endif
+ 
+-	/* set bus master, which was cleared by the reset function */
+-	pci_set_master(dev);
++	if (atomic_read(&udev->refcnt) == 0) {
++		atomic_inc(&udev->refcnt);
++		/* set bus master, which was cleared by the reset function */
++		pci_set_master(dev);
++
++#ifdef IFC_QDMA_MSIX_ENABLE
++		udev->info.irq = 1;
++#ifndef IFC_QDMA_DYN_CHAN
++		/* enable interrupts */
++		vectors = pci_msix_vec_count(udev->pdev);
++		if(vectors < 0){
++			pr_err("failed while enabling getting vectors\n");
++			return 0;
++		}
+ 
+-	/* enable interrupts */
+-	err = igbuio_pci_enable_interrupts(udev);
+-	if (err) {
+-		atomic_dec(&udev->refcnt);
+-		dev_err(&dev->dev, "Enable interrupt fails\n");
++                err = igbuio_pci_enable_interrupts(udev, vectors);
++                if (err) {
++                        atomic_dec(&udev->refcnt);
++                        dev_err(&dev->dev, "Enable interrupt fails\n");
++                }
++#endif // IFC_QDMA_DYN_CHAN
++#endif
+ 	}
+ 	return err;
+ }
+@@ -338,14 +598,13 @@ struct rte_uio_pci_dev {
+ igbuio_pci_release(struct uio_info *info, struct inode *inode)
+ {
+ 	struct rte_uio_pci_dev *udev = info->priv;
+-	struct pci_dev *dev = udev->pdev;
+ 
+-	if (atomic_dec_and_test(&udev->refcnt)) {
++	if (atomic_read(&udev->refcnt) == 1) {
++		atomic_dec(&udev->refcnt);
++#ifdef IFC_QDMA_MSIX_ENABLE
+ 		/* disable interrupts */
+ 		igbuio_pci_disable_interrupts(udev);
+-
+-		/* stop the device from further DMA */
+-		pci_clear_master(dev);
++#endif
+ 	}
+ 
+ 	return 0;
+@@ -519,6 +778,7 @@ struct rte_uio_pci_dev {
+ 	udev->info.priv = udev;
+ 	udev->pdev = dev;
+ 	atomic_set(&udev->refcnt, 0);
++	mutex_init(&udev->msix_state_lock);
+ 
+ 	err = sysfs_create_group(&dev->dev.kobj, &dev_attr_grp);
+ 	if (err != 0)
+-- 
+1.8.3.1
+

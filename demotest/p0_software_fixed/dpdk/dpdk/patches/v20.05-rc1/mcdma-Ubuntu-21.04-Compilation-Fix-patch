@@ -1,0 +1,92 @@
+From bd65071594518bf0afbd66ecef63b1504233d25e Mon Sep 17 00:00:00 2001
+From: Patkar Rutuparna <rutuparnax.patkar@intel.com>
+Date: Mon, 9 Aug 2021 07:40:11 -0400
+Subject: [PATCH] mcdma: Ubuntu 21.04 Compilation Fix
+
+This patch includes:
+- Changes to disble PMDs that do not have support
+on Kernel version 5.11 and Ubuntu OS version 21.04
+
+Title: mcdma: Ubuntu 21.04 Compilation Fix
+---
+ config/common_base  |  4 ++--
+ config/common_linux | 24 ++++++++++++------------
+ mk/rte.vars.mk      |  2 +-
+ 3 files changed, 15 insertions(+), 15 deletions(-)
+
+diff --git a/config/common_base b/config/common_base
+index 14000ba..81d584d 100644
+--- a/config/common_base
++++ b/config/common_base
+@@ -219,7 +219,7 @@ CONFIG_RTE_LIBRTE_BNX2X_DEBUG_PERIODIC=n
+ #
+ # Compile burst-oriented Broadcom BNXT PMD driver
+ #
+-CONFIG_RTE_LIBRTE_BNXT_PMD=y
++CONFIG_RTE_LIBRTE_BNXT_PMD=n
+ 
+ #
+ # Compile burst-oriented Chelsio Terminator (CXGBE) PMD
+@@ -246,7 +246,7 @@ CONFIG_RTE_LIBRTE_FSLMC_BUS=n
+ # Compile Support Libraries for NXP DPAA2
+ #
+ CONFIG_RTE_LIBRTE_DPAA2_MEMPOOL=n
+-CONFIG_RTE_LIBRTE_DPAA2_USE_PHYS_IOVA=y
++CONFIG_RTE_LIBRTE_DPAA2_USE_PHYS_IOVA=n
+ 
+ #
+ # Compile burst-oriented NXP DPAA2 PMD driver
+diff --git a/config/common_linux b/config/common_linux
+index 8168106..7ba312d 100644
+--- a/config/common_linux
++++ b/config/common_linux
+@@ -36,21 +36,21 @@ CONFIG_RTE_LIBRTE_NETVSC_PMD=y
+ CONFIG_RTE_LIBRTE_COMMON_DPAAX=y
+ 
+ # NXP DPAA BUS and drivers
+-CONFIG_RTE_LIBRTE_DPAA_BUS=y
+-CONFIG_RTE_LIBRTE_DPAA_MEMPOOL=y
+-CONFIG_RTE_LIBRTE_DPAA_PMD=y
+-CONFIG_RTE_LIBRTE_PMD_DPAA_EVENTDEV=y
+-CONFIG_RTE_LIBRTE_PMD_DPAA_SEC=y
+-CONFIG_RTE_LIBRTE_PMD_CAAM_JR=y
++CONFIG_RTE_LIBRTE_DPAA_BUS=n
++CONFIG_RTE_LIBRTE_DPAA_MEMPOOL=n
++CONFIG_RTE_LIBRTE_DPAA_PMD=n
++CONFIG_RTE_LIBRTE_PMD_DPAA_EVENTDEV=n
++CONFIG_RTE_LIBRTE_PMD_DPAA_SEC=n
++CONFIG_RTE_LIBRTE_PMD_CAAM_JR=n
+ 
+ # NXP FSLMC BUS and DPAA2 drivers
+ CONFIG_RTE_LIBRTE_FSLMC_BUS=y
+-CONFIG_RTE_LIBRTE_DPAA2_MEMPOOL=y
+-CONFIG_RTE_LIBRTE_DPAA2_PMD=y
+-CONFIG_RTE_LIBRTE_PMD_DPAA2_EVENTDEV=y
+-CONFIG_RTE_LIBRTE_PMD_DPAA2_SEC=y
+-CONFIG_RTE_LIBRTE_PMD_DPAA2_CMDIF_RAWDEV=y
+-CONFIG_RTE_LIBRTE_PMD_DPAA2_QDMA_RAWDEV=y
++CONFIG_RTE_LIBRTE_DPAA2_MEMPOOL=n
++CONFIG_RTE_LIBRTE_DPAA2_PMD=n
++CONFIG_RTE_LIBRTE_PMD_DPAA2_EVENTDEV=n
++CONFIG_RTE_LIBRTE_PMD_DPAA2_SEC=n
++CONFIG_RTE_LIBRTE_PMD_DPAA2_CMDIF_RAWDEV=n
++CONFIG_RTE_LIBRTE_PMD_DPAA2_QDMA_RAWDEV=n
+ 
+ #
+ # NXP ENETC PMD Driver
+diff --git a/mk/rte.vars.mk b/mk/rte.vars.mk
+index 07b0db1..e4297b7 100644
+--- a/mk/rte.vars.mk
++++ b/mk/rte.vars.mk
+@@ -79,7 +79,7 @@ export RTE_TOOLCHAIN
+ 
+ # developer build automatically enabled in a git tree
+ ifneq ($(wildcard $(RTE_SDK)/.git),)
+-RTE_DEVEL_BUILD ?= y
++RTE_DEVEL_BUILD ?= n
+ endif
+ 
+ # SRCDIR is the current source directory
+-- 
+1.8.3.1
+

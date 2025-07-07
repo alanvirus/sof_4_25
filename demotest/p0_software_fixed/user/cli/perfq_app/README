@@ -1,0 +1,108 @@
+--------------------------------------------
+perfq_app:
+--------------------------------------------
+It is a Multithreaded Application used to verify the functionality and
+performance measurement, that uses APIs provided by the
+userspace library of QDMA to transfer data from host to IO device and
+vice versa.
+
+--------------------------------------------
+Options Details:
+-------------------
+-h              Displays the supported options for perfq application
+-a <num_thr>	Number of threads to be used to schedule queue
+-b <bdf>	application uses the bdf to detect the mcdma IO device
+-c <chnls>      Number of Channels to be used -- for AVMM upto 512 and for
+		AVST upto 256 channels are supported
+-d <seconds>    Refresh rate in seconds for Performance logs --
+		if this flag is not used then no update on transfer
+		is provided during the transmission
+-f <#dsriptrs>	File Size in Descriptors
+-p <bytes>      Payload in bytes of each descriptor -- limited to 1 MB
+-s <bytes>      Request Size in Bytes
+-l <seconds>    Time limit in Seconds
+-o		PIO Test -- Hundred Reads and Writes are performed
+		on the PIO registers
+-t              Transmit Operation
+-r              Receive Operation
+-v		Enable Data Validation -- Data is verified against
+		the expected data
+-x <#dscriptrs>	Batch Mode -- requests are submitted in batches of size
+		provided by the user -- i.e. Tail register is updated
+		combining the descriptors in batches
+
+AVST Example Design:
+--------------------
+  |
+  |--> Loopback: 	Data sent though Tx appears in Rx direction of the same
+  |		 	channel -- Two ends of a U shaped pipe
+  |--> Packet Gen/Val:	HW sends and receives data depending on the requests
+			submitted by the application
+
+AVST Specific options:
+-----------------------
+Along with -t and -r following functionalities are supported:
+
+-i		Independent Loop back Transfer -- No ordering is imposed
+		on Tx and Rx
+-z		Bidirectional Packet Gen/Val Transfer -- Simultaneously Transmit and Receive
+		operations are carried out
+
+Required	b  &  ((p & (t | r | z | i ) & (s | l) c & a)) | o)
+parameters
+
+Enablement: 	Swich on "IFC_QDMA_INTF_AVST" in common/include/mcdma_ip_params.h file
+
+AVMM Example Design:
+--------------------
+32 KB buffer is divided into regions and each such memory region is allocated
+to one channel
+
+AVMM Specificd options:
+------------------------
+Along with -t and -r following functionalities are supported:
+
+-u		Loop back Transfer -- AVMM Loopback imposes ordering on Tx and Rx
+
+Required	b  &  ((p & (t | r | u) & (s | l) c & a)) | o)
+parameters
+
+Enablement: 	Swich off "IFC_QDMA_INTF_AVST" in common/include/mcdma_ip_params.h file
+
+Usage Examples:
+--------------------------------------------
+./perfq_app -h
+	shows all the command line arguments
+./perfq_app -b 0000:5e:00.0 -o
+	PIO Testing
+./perfq_app -b <BDF> -p 1024 -s 10240 -t -v -d 1 -c 2 -a 2
+	10 KB data Tx operation using 10 descriptors in each of 2 channels
+	with data validation and performance log is generated at each
+	second
+./perfq_app -b <BDF> -p 1024 -l 2 -r -v -c 1 -a 1
+	Rx operation carried out for 2 seconds with each descriptor containing
+	1 KB of payload with data validation
+./perfq_app -b <BDF> -p 16384 -u -l 100 -c 4 -a 2
+	Loopback operation carried out for 100 seconds on 4 channels where
+	each descriptor payload is 16 KB
+./perfq_app -b <BDF> -p 1024 -l 2 -z -x 64 -c 2 -a 4
+	In AVST, simultaneous bi-directional transfer is carried out for 2
+	seconds where request submissions are done batches of 64 request
+	descriptors
+------------------------------
+Perfomance Log Format (-d):
+-------------------------------
+Chnl_d  Req_sent      Req_comp      Time_elpsd     Cmp%        TBW        IBW      Cml_TBW    Cml_IBW
+ 0Tx    105408        105344        00:00:999     99.94     01.61GBPS  01.61GBPS  01.61GBPS  01.61GBPS
+
+Chnl_d		Channel ID and Direction
+Req_sent	Request Descriptors Submitted
+Req_comp	Request Descriptors Completed
+Time_elpse	Time Elapsed (mm:ss:mm)
+Cmp%		Percentage of submitted requests completed
+TBW		Total Bandwidth
+IBW		Interval Bandwidth
+Cml_TBW		Cumulative Total Bandwidth
+Cml_IBW		Cumulative Interval Bandwidth
+
+--------------------------------------------

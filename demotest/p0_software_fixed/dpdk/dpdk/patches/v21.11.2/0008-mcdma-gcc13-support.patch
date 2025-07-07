@@ -1,0 +1,41 @@
+diff --git dpdk-stable/drivers/net/bnxt/tf_ulp/ulp_flow_db.h dpdk-stable-gcc/drivers/net/bnxt/tf_ulp/ulp_flow_db.h
+index b27678d..67f3a41 100644
+--- dpdk-stable/drivers/net/bnxt/tf_ulp/ulp_flow_db.h
++++ dpdk-stable-gcc/drivers/net/bnxt/tf_ulp/ulp_flow_db.h
+@@ -209,7 +209,7 @@ ulp_flow_db_resource_get(struct bnxt_ulp_context *ulp_ctxt,
+  */
+ int32_t
+ ulp_flow_db_flush_flows(struct bnxt_ulp_context *ulp_ctx,
+-			uint32_t idx);
++			enum bnxt_ulp_fdb_type flow_type);
+ 
+ /*
+  * Flush all flows in the flow database that belong to a device function.
+diff --git dpdk-stable/drivers/net/virtio/virtio_user/vhost_user.c dpdk-stable-gcc/drivers/net/virtio/virtio_user/vhost_user.c
+index 77820bf..df383bd 100644
+--- dpdk-stable/drivers/net/virtio/virtio_user/vhost_user.c
++++ dpdk-stable-gcc/drivers/net/virtio/virtio_user/vhost_user.c
+@@ -129,7 +129,8 @@ vhost_user_write(int fd, struct vhost_user_msg *msg, int *fds, int fd_num)
+ 	cmsg->cmsg_len = CMSG_LEN(fd_size);
+ 	cmsg->cmsg_level = SOL_SOCKET;
+ 	cmsg->cmsg_type = SCM_RIGHTS;
+-	memcpy(CMSG_DATA(cmsg), fds, fd_size);
++	if (fd_size > 0)
++		memcpy(CMSG_DATA(cmsg), fds, fd_size);
+ 
+ 	do {
+ 		r = sendmsg(fd, &msgh, 0);
+diff --git dpdk-stable/lib/pcapng/rte_pcapng.c dpdk-stable-gcc/lib/pcapng/rte_pcapng.c
+index 0caf3d3..5b85b8d 100644
+--- dpdk-stable/lib/pcapng/rte_pcapng.c
++++ dpdk-stable-gcc/lib/pcapng/rte_pcapng.c
+@@ -109,7 +109,8 @@ pcapng_add_option(struct pcapng_option *popt, uint16_t code,
+ {
+ 	popt->code = code;
+ 	popt->length = len;
+-	memcpy(popt->data, data, len);
++	if (len > 0)
++		memcpy(popt->data, data, len);
+ 
+ 	return (struct pcapng_option *)((uint8_t *)popt + pcapng_optlen(len));
+ }

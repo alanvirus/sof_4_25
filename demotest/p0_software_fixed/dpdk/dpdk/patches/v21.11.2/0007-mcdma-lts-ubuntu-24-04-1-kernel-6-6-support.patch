@@ -1,0 +1,52 @@
+diff --git dpdk-stable/kernel/linux/kni/kni_dev.h dpdk-stable-upgrade/kernel/linux/kni/kni_dev.h
+index e863348..f7d44a0 100644
+--- dpdk-stable/kernel/linux/kni/kni_dev.h
++++ dpdk-stable-upgrade/kernel/linux/kni/kni_dev.h
+@@ -104,12 +104,27 @@ static inline phys_addr_t iova_to_phys(struct task_struct *tsk,
+ 	offset = iova & (PAGE_SIZE - 1);
+ 
+ 	/* Read one page struct info */
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
+ #ifdef HAVE_TSK_IN_GUP
+ 	ret = get_user_pages_remote(tsk, tsk->mm, iova, 1,
+ 				    FOLL_TOUCH, &page, NULL, NULL);
+ #else
+ 	ret = get_user_pages_remote(tsk->mm, iova, 1,
+ 				    FOLL_TOUCH, &page, NULL, NULL);
++#endif
++#elif LINUX_VERSION_CODE < KERNEL_VERSION(6, 5, 0)
++#ifdef HAVE_TSK_IN_GUP
++	ret = get_user_pages_remote(tsk, tsk->mm, iova, 1,
++					    0, &page, NULL, NULL);
++#else
++	ret = get_user_pages_remote(tsk->mm, iova, 1, 0, &page, NULL, NULL);
++#endif
++#else
++#ifdef HAVE_TSK_IN_GUP
++	ret = get_user_pages_remote(tsk, tsk->mm, iova, 1, 0, &page, NULL);
++#else
++	ret = get_user_pages_remote(tsk->mm, iova, 1, 0, &page, NULL);
++#endif
+ #endif
+ 	if (ret < 0)
+ 		return 0;
+diff --git dpdk-stable/kernel/linux/kni/kni_net.c dpdk-stable-upgrade/kernel/linux/kni/kni_net.c
+index 779ee34..6f2023c 100644
+--- dpdk-stable/kernel/linux/kni/kni_net.c
++++ dpdk-stable-upgrade/kernel/linux/kni/kni_net.c
+@@ -832,8 +832,13 @@ static const struct net_device_ops kni_net_netdev_ops = {
+ static void kni_get_drvinfo(struct net_device *dev,
+ 			    struct ethtool_drvinfo *info)
+ {
+-	strlcpy(info->version, KNI_VERSION, sizeof(info->version));
+-	strlcpy(info->driver, "kni", sizeof(info->driver));
++	#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0)
++		strlcpy(info->version, KNI_VERSION, sizeof(info->version));
++		strlcpy(info->driver, "kni", sizeof(info->driver));
++	#else
++		strscpy(info->version, KNI_VERSION, sizeof(info->version));
++		strscpy(info->driver, "kni", sizeof(info->driver));
++	#endif
+ }
+ 
+ static const struct ethtool_ops kni_net_ethtool_ops = {

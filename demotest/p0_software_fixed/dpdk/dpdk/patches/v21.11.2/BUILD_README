@@ -1,0 +1,21 @@
+Build steps for McDMA with DPDK v21.11.2 on Ubuntu
+==================================================
+
+NOTE: Make sure meson and elf utility is installed on the system before building DPDK v21.11.2.
+      If not installed use commands "sudo apt install meson" and "sudo apt install python3-pyelftools".
+
+1. Execute patch script from v21.11.2 directory
+   #cd <path>/patches/v21.11.2/
+   #./apply-patch.sh
+
+2. Go to dpdk stable directory
+   #cd dpdk-stable
+
+3. Configure and build dpdk
+   #meson build
+   #DESTDIR=install ninja -C build install
+
+4. Go to build directory and build igb_uio kernel driver and perfq
+   #meson configure -Dexamples=mcdma-test/perfq -Denable_kmods=true
+   #ninja
+

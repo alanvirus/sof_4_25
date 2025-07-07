@@ -1,0 +1,1767 @@
+From d8d54e78dc4b6bc5dd5b8b11c795bc5c0243e23f Mon Sep 17 00:00:00 2001
+From: Patkar Rutuparna <rutuparnax.patkar@intel.com>
+Date: Tue, 20 Apr 2021 19:15:37 -0400
+Subject: [PATCH 4/7] mcdma: DPDK 1MB support
+
+This patch includes changes to hold and transfer 1MB data in packet
+buffer by modifying data types from uint16_t from uint32_t in
+rte_mbuf struct for data_len and mbuf_data_room_size and mtu
+member of struct rte_eth_dev_data to uint32_t.
+
+Title: mcdma: DPDK 1MB support
+Signed-off-by: Patkar, RutuparnaX <rutuparnax.patkar@intel.com>
+---
+ app/pdump/main.c                              |  2 +-
+ app/proc-info/main.c                          |  2 +-
+ app/test-eventdev/evt_common.h                |  2 +-
+ app/test-eventdev/evt_options.c               |  2 +-
+ app/test-pmd/config.c                         | 12 ++++++------
+ app/test-pmd/testpmd.c                        | 12 ++++++------
+ app/test-pmd/testpmd.h                        |  8 ++++----
+ app/test/test_cryptodev.h                     |  6 +++---
+ app/test/test_mbuf.c                          |  2 +-
+ drivers/crypto/dpaa2_sec/dpaa2_sec_dpseci.c   |  4 ++--
+ drivers/crypto/dpaa_sec/dpaa_sec.c            |  4 ++--
+ drivers/crypto/nitrox/nitrox_sym_reqmgr.c     |  4 ++--
+ drivers/mempool/octeontx/octeontx_fpavf.h     |  2 +-
+ drivers/net/af_packet/rte_eth_af_packet.c     |  2 +-
+ drivers/net/ark/ark_ethdev.c                  |  4 ++--
+ drivers/net/ark/ark_ethdev_rx.c               |  3 ++-
+ drivers/net/ark/ark_udm.h                     |  2 +-
+ drivers/net/atlantic/atl_ethdev.c             |  4 ++--
+ drivers/net/bnxt/bnxt.h                       |  2 +-
+ drivers/net/bnxt/bnxt_ethdev.c                |  2 +-
+ drivers/net/bonding/rte_eth_bond_pmd.c        |  2 +-
+ drivers/net/cxgbe/cxgbe_ethdev.c              |  2 +-
+ drivers/net/cxgbe/cxgbe_pfvf.h                |  2 +-
+ drivers/net/dpaa/dpaa_ethdev.c                |  2 +-
+ drivers/net/dpaa2/dpaa2_ethdev.c              |  4 ++--
+ drivers/net/e1000/em_ethdev.c                 |  4 ++--
+ drivers/net/e1000/igb_ethdev.c                |  4 ++--
+ drivers/net/ena/ena_ethdev.c                  |  4 ++--
+ drivers/net/enetc/enetc_ethdev.c              |  2 +-
+ drivers/net/enic/enic_ethdev.c                |  2 +-
+ drivers/net/failsafe/failsafe_ops.c           |  2 +-
+ drivers/net/fm10k/fm10k_rxtx_vec.c            |  4 ++--
+ drivers/net/hinic/hinic_pmd_ethdev.c          |  2 +-
+ drivers/net/hns3/hns3_ethdev.c                |  4 ++--
+ drivers/net/hns3/hns3_ethdev_vf.c             |  4 ++--
+ drivers/net/i40e/i40e_ethdev.c                |  4 ++--
+ drivers/net/i40e/i40e_ethdev_vf.c             |  4 ++--
+ drivers/net/i40e/i40e_rxtx_vec_avx2.c         |  6 +++---
+ drivers/net/i40e/i40e_rxtx_vec_sse.c          |  6 +++---
+ drivers/net/iavf/iavf_ethdev.c                |  4 ++--
+ drivers/net/iavf/iavf_rxtx_vec_avx2.c         | 12 ++++++------
+ drivers/net/iavf/iavf_rxtx_vec_sse.c          | 12 ++++++------
+ drivers/net/ice/ice_ethdev.c                  |  4 ++--
+ drivers/net/ice/ice_rxtx_vec_avx2.c           |  6 +++---
+ drivers/net/ice/ice_rxtx_vec_sse.c            |  6 +++---
+ drivers/net/igc/igc_ethdev.c                  |  4 ++--
+ drivers/net/ionic/ionic_ethdev.c              |  4 ++--
+ drivers/net/ixgbe/ixgbe_ethdev.c              |  8 ++++----
+ drivers/net/ixgbe/ixgbe_rxtx_vec_sse.c        |  6 +++---
+ drivers/net/liquidio/lio_ethdev.c             |  2 +-
+ drivers/net/nfp/nfp_net.c                     |  4 ++--
+ drivers/net/null/rte_eth_null.c               |  2 +-
+ drivers/net/octeontx/octeontx_ethdev.c        |  2 +-
+ drivers/net/octeontx2/otx2_ethdev.c           |  8 ++++----
+ drivers/net/octeontx2/otx2_ethdev.h           |  2 +-
+ drivers/net/octeontx2/otx2_ethdev_ops.c       |  2 +-
+ drivers/net/qede/qede_ethdev.c                |  2 +-
+ drivers/net/sfc/sfc_ef10_tx.c                 |  4 ++--
+ drivers/net/sfc/sfc_ethdev.c                  |  2 +-
+ drivers/net/tap/rte_eth_tap.c                 |  5 +++--
+ drivers/net/tap/rte_eth_tap.h                 |  2 +-
+ drivers/net/thunderx/nicvf_ethdev.c           |  7 +++----
+ drivers/net/virtio/virtio_ethdev.c            |  2 +-
+ drivers/net/virtio/virtio_ethdev.h            |  2 +-
+ drivers/net/virtio/virtio_rxtx.c              | 15 +++++++++------
+ drivers/net/vmxnet3/vmxnet3_ethdev.c          |  4 ++--
+ lib/librte_eal/linux/include/rte_kni_common.h |  3 ++-
+ lib/librte_ethdev/rte_ethdev.c                |  6 +++---
+ lib/librte_ethdev/rte_ethdev.h                |  8 ++++----
+ lib/librte_ethdev/rte_ethdev_core.h           |  4 ++--
+ lib/librte_mbuf/rte_mbuf.c                    | 13 +++++++------
+ lib/librte_mbuf/rte_mbuf.h                    | 21 ++++++++++-----------
+ lib/librte_mbuf/rte_mbuf_core.h               |  6 +++---
+ lib/librte_vhost/rte_vhost.h                  |  2 +-
+ lib/librte_vhost/vhost.c                      |  2 +-
+ 75 files changed, 174 insertions(+), 169 deletions(-)
+
+diff --git a/app/pdump/main.c b/app/pdump/main.c
+index c38c537..439d0d0 100644
+--- a/app/pdump/main.c
++++ b/app/pdump/main.c
+@@ -114,7 +114,7 @@ struct pdump_tuples {
+ 	char rx_dev[TX_STREAM_SIZE];
+ 	char tx_dev[TX_STREAM_SIZE];
+ 	uint32_t ring_size;
+-	uint16_t mbuf_data_size;
++	uint32_t mbuf_data_size;
+ 	uint32_t total_num_mbufs;
+ 
+ 	/* params for library API call */
+diff --git a/app/proc-info/main.c b/app/proc-info/main.c
+index abeca4a..3782fe6 100644
+--- a/app/proc-info/main.c
++++ b/app/proc-info/main.c
+@@ -667,7 +667,7 @@ static void collectd_resolve_cnt_type(char *cnt_type, size_t cnt_type_len,
+ 	STATS_BDR_STR(10, bdr_str);
+ 
+ 	RTE_ETH_FOREACH_DEV(i) {
+-		uint16_t mtu = 0;
++		uint32_t mtu = 0;
+ 		struct rte_eth_link link;
+ 		struct rte_eth_dev_info dev_info;
+ 		struct rte_eth_rxq_info queue_info;
+diff --git a/app/test-eventdev/evt_common.h b/app/test-eventdev/evt_common.h
+index f9d7378..e0f8652 100644
+--- a/app/test-eventdev/evt_common.h
++++ b/app/test-eventdev/evt_common.h
+@@ -56,7 +56,7 @@ struct evt_options {
+ 	uint8_t nb_timer_adptrs;
+ 	uint8_t timdev_use_burst;
+ 	uint8_t sched_type_list[EVT_MAX_STAGES];
+-	uint16_t mbuf_sz;
++	uint32_t mbuf_sz;
+ 	uint16_t wkr_deq_dep;
+ 	uint32_t nb_flows;
+ 	uint32_t tx_first;
+diff --git a/app/test-eventdev/evt_options.c b/app/test-eventdev/evt_options.c
+index c60b61a..1ce7ab8 100644
+--- a/app/test-eventdev/evt_options.c
++++ b/app/test-eventdev/evt_options.c
+@@ -238,7 +238,7 @@ struct long_opt_parser {
+ {
+ 	int ret;
+ 
+-	ret = parser_read_uint16(&(opt->mbuf_sz), arg);
++	ret = parser_read_uint32(&(opt->mbuf_sz), arg);
+ 
+ 	return ret;
+ }
+diff --git a/app/test-pmd/config.c b/app/test-pmd/config.c
+index 72f25d1..d985e18 100644
+--- a/app/test-pmd/config.c
++++ b/app/test-pmd/config.c
+@@ -532,7 +532,7 @@ static int bus_match_all(const struct rte_bus *bus, const void *data)
+ 	int vlan_offload;
+ 	struct rte_mempool * mp;
+ 	static const char *info_border = "*********************";
+-	uint16_t mtu;
++	uint32_t mtu;
+ 	char name[RTE_ETH_NAME_MAX_LEN];
+ 	int ret;
+ 	char fw_version[ETHDEV_FWVERS_LEN];
+@@ -1232,12 +1232,12 @@ void print_valid_ports(void)
+ }
+ 
+ void
+-port_mtu_set(portid_t port_id, uint16_t mtu)
++port_mtu_set(portid_t port_id, uint32_t mtu)
+ {
+ 	int diag;
+ 	struct rte_port *rte_port = &ports[port_id];
+ 	struct rte_eth_dev_info dev_info;
+-	uint16_t eth_overhead;
++	uint32_t eth_overhead;
+ 	int ret;
+ 
+ 	if (port_id_is_invalid(port_id, ENABLED_WARN))
+@@ -2841,7 +2841,7 @@ struct igb_ring_desc_16_bytes {
+ void
+ set_tx_pkt_segments(unsigned *seg_lengths, unsigned nb_segs)
+ {
+-	uint16_t tx_pkt_len;
++	uint32_t tx_pkt_len;
+ 	unsigned i;
+ 
+ 	if (nb_segs >= (unsigned) nb_txd) {
+@@ -2864,7 +2864,7 @@ struct igb_ring_desc_16_bytes {
+ 			       i, seg_lengths[i], (unsigned) mbuf_data_size);
+ 			return;
+ 		}
+-		tx_pkt_len = (uint16_t)(tx_pkt_len + seg_lengths[i]);
++		tx_pkt_len = (uint32_t)(tx_pkt_len + seg_lengths[i]);
+ 	}
+ 	if (tx_pkt_len < (sizeof(struct rte_ether_hdr) + 20 + 8)) {
+ 		printf("total packet length=%u < %d - give up\n",
+@@ -2874,7 +2874,7 @@ struct igb_ring_desc_16_bytes {
+ 	}
+ 
+ 	for (i = 0; i < nb_segs; i++)
+-		tx_pkt_seg_lengths[i] = (uint16_t) seg_lengths[i];
++		tx_pkt_seg_lengths[i] = (uint32_t) seg_lengths[i];
+ 
+ 	tx_pkt_length  = tx_pkt_len;
+ 	tx_pkt_nb_segs = (uint8_t) nb_segs;
+diff --git a/app/test-pmd/testpmd.c b/app/test-pmd/testpmd.c
+index 99bacdd..e54c001 100644
+--- a/app/test-pmd/testpmd.c
++++ b/app/test-pmd/testpmd.c
+@@ -197,7 +197,7 @@ struct fwd_engine * fwd_engines[] = {
+ uint32_t burst_tx_delay_time = BURST_TX_WAIT_US;
+ uint32_t burst_tx_retry_num = BURST_TX_RETRIES;
+ 
+-uint16_t mbuf_data_size = DEFAULT_MBUF_DATA_SIZE; /**< Mbuf data space size. */
++uint32_t mbuf_data_size = DEFAULT_MBUF_DATA_SIZE; /**< Mbuf data space size. */
+ uint32_t param_total_num_mbufs = 0;  /**< number of mbufs in all pools - if
+                                       * specified on command-line. */
+ uint16_t stats_period; /**< Period to show statistics (disabled by default) */
+@@ -211,8 +211,8 @@ struct fwd_engine * fwd_engines[] = {
+ /*
+  * Configuration of packet segments used by the "txonly" processing engine.
+  */
+-uint16_t tx_pkt_length = TXONLY_DEF_PACKET_LEN; /**< TXONLY packet length. */
+-uint16_t tx_pkt_seg_lengths[RTE_MAX_SEGS_PER_PKT] = {
++uint32_t tx_pkt_length = TXONLY_DEF_PACKET_LEN; /**< TXONLY packet length. */
++uint32_t tx_pkt_seg_lengths[RTE_MAX_SEGS_PER_PKT] = {
+ 	TXONLY_DEF_PACKET_LEN,
+ };
+ uint8_t  tx_pkt_nb_segs = 1; /**< Number of segments in TXONLY packets */
+@@ -933,7 +933,7 @@ struct extmem_param {
+  * Configuration initialisation done once at init time.
+  */
+ static struct rte_mempool *
+-mbuf_pool_create(uint16_t mbuf_seg_size, unsigned nb_mbuf,
++mbuf_pool_create(uint32_t mbuf_seg_size, unsigned nb_mbuf,
+ 		 unsigned int socket_id)
+ {
+ 	char pool_name[RTE_MEMPOOL_NAMESIZE];
+@@ -1463,8 +1463,8 @@ struct extmem_param {
+ 			data_size = rx_mode.max_rx_pkt_len /
+ 				port->dev_info.rx_desc_lim.nb_mtu_seg_max;
+ 
+-			if ((data_size + RTE_PKTMBUF_HEADROOM) >
+-							mbuf_data_size) {
++			if (((uint32_t)data_size + (uint32_t)RTE_PKTMBUF_HEADROOM) >
++							(uint32_t)mbuf_data_size) {
+ 				mbuf_data_size = data_size +
+ 						 RTE_PKTMBUF_HEADROOM;
+ 				warning = 1;
+diff --git a/app/test-pmd/testpmd.h b/app/test-pmd/testpmd.h
+index 7ff4c5d..b4104d2 100644
+--- a/app/test-pmd/testpmd.h
++++ b/app/test-pmd/testpmd.h
+@@ -418,7 +418,7 @@ struct queue_stats_mappings {
+ extern uint8_t dcb_config;
+ extern uint8_t dcb_test;
+ 
+-extern uint16_t mbuf_data_size; /**< Mbuf data space size. */
++extern uint32_t mbuf_data_size; /**< Mbuf data space size. */
+ extern uint32_t param_total_num_mbufs;
+ 
+ extern uint16_t stats_period;
+@@ -439,8 +439,8 @@ struct queue_stats_mappings {
+  * Configuration of packet segments used by the "txonly" processing engine.
+  */
+ #define TXONLY_DEF_PACKET_LEN 64
+-extern uint16_t tx_pkt_length; /**< Length of TXONLY packet */
+-extern uint16_t tx_pkt_seg_lengths[RTE_MAX_SEGS_PER_PKT]; /**< Seg. lengths */
++extern uint32_t tx_pkt_length; /**< Length of TXONLY packet */
++extern uint32_t tx_pkt_seg_lengths[RTE_MAX_SEGS_PER_PKT]; /**< Seg. lengths */
+ extern uint8_t  tx_pkt_nb_segs; /**< Number of segments in TX packets */
+ 
+ enum tx_pkt_split {
+@@ -729,7 +729,7 @@ unsigned int parse_item_list(char* str, const char* item_name,
+ 
+ void set_fwd_eth_peer(portid_t port_id, char *peer_addr);
+ 
+-void port_mtu_set(portid_t port_id, uint16_t mtu);
++void port_mtu_set(portid_t port_id, uint32_t mtu);
+ void port_reg_bit_display(portid_t port_id, uint32_t reg_off, uint8_t bit_pos);
+ void port_reg_bit_set(portid_t port_id, uint32_t reg_off, uint8_t bit_pos,
+ 		      uint8_t bit_v);
+diff --git a/app/test/test_cryptodev.h b/app/test/test_cryptodev.h
+index 41542e0..83f83ec 100644
+--- a/app/test/test_cryptodev.h
++++ b/app/test/test_cryptodev.h
+@@ -91,7 +91,7 @@
+ 	struct rte_mbuf *m;
+ 	char *dst;
+ 
+-	for (m = mbuf; (m != NULL) && (offset > m->data_len); m = m->next)
++	for (m = mbuf; (m != NULL) && ((uint32_t)offset > m->data_len);	m = m->next)
+ 		offset -= m->data_len;
+ 
+ 	l = m->data_len - offset;
+@@ -124,7 +124,7 @@
+ pktmbuf_mtod_offset(struct rte_mbuf *mbuf, int offset) {
+ 	struct rte_mbuf *m;
+ 
+-	for (m = mbuf; (m != NULL) && (offset > m->data_len); m = m->next)
++	for (m = mbuf; (m != NULL) && ((uint32_t)offset > m->data_len);	m = m->next)
+ 		offset -= m->data_len;
+ 
+ 	if (m == NULL) {
+@@ -138,7 +138,7 @@
+ pktmbuf_iova_offset(struct rte_mbuf *mbuf, int offset) {
+ 	struct rte_mbuf *m;
+ 
+-	for (m = mbuf; (m != NULL) && (offset > m->data_len); m = m->next)
++	for (m = mbuf; (m != NULL) && ((uint32_t)offset > m->data_len);	m = m->next)
+ 		offset -= m->data_len;
+ 
+ 	if (m == NULL) {
+diff --git a/app/test/test_mbuf.c b/app/test/test_mbuf.c
+index 71bdab6..ca06a75 100644
+--- a/app/test/test_mbuf.c
++++ b/app/test/test_mbuf.c
+@@ -2683,7 +2683,7 @@ struct test_case {
+ 	struct rte_mempool *pktmbuf_pool2 = NULL;
+ 
+ 
+-	RTE_BUILD_BUG_ON(sizeof(struct rte_mbuf) != RTE_CACHE_LINE_MIN_SIZE * 2);
++	RTE_BUILD_BUG_ON(sizeof(struct rte_mbuf) != RTE_CACHE_LINE_MIN_SIZE * 3);
+ 
+ 	/* create pktmbuf pool if it does not exist */
+ 	pktmbuf_pool = rte_pktmbuf_pool_create("test_pktmbuf_pool",
+diff --git a/drivers/crypto/dpaa2_sec/dpaa2_sec_dpseci.c b/drivers/crypto/dpaa2_sec/dpaa2_sec_dpseci.c
+index 0919f3b..19a6c8f 100644
+--- a/drivers/crypto/dpaa2_sec/dpaa2_sec_dpseci.c
++++ b/drivers/crypto/dpaa2_sec/dpaa2_sec_dpseci.c
+@@ -947,7 +947,7 @@ static inline int build_auth_sg_fd(
+ 	DPAA2_SET_FLE_ADDR(sge, DPAA2_MBUF_VADDR_TO_IOVA(mbuf));
+ 	DPAA2_SET_FLE_OFFSET(sge, data_offset + mbuf->data_off);
+ 
+-	if (data_len <= (mbuf->data_len - data_offset)) {
++	if ((uint32_t)data_len <= (mbuf->data_len - (uint32_t)data_offset)) {
+ 		sge->length = data_len;
+ 		data_len = 0;
+ 	} else {
+@@ -959,7 +959,7 @@ static inline int build_auth_sg_fd(
+ 			sge++;
+ 			DPAA2_SET_FLE_ADDR(sge, DPAA2_MBUF_VADDR_TO_IOVA(mbuf));
+ 			DPAA2_SET_FLE_OFFSET(sge, mbuf->data_off);
+-			if (data_len > mbuf->data_len)
++			if ((uint32_t)data_len > mbuf->data_len)
+ 				sge->length = mbuf->data_len;
+ 			else
+ 				sge->length = data_len;
+diff --git a/drivers/crypto/dpaa_sec/dpaa_sec.c b/drivers/crypto/dpaa_sec/dpaa_sec.c
+index a11b17b..1f01917 100644
+--- a/drivers/crypto/dpaa_sec/dpaa_sec.c
++++ b/drivers/crypto/dpaa_sec/dpaa_sec.c
+@@ -772,7 +772,7 @@ static inline int is_decode(dpaa_sec_session *ses)
+ 	qm_sg_entry_set64(sg, rte_pktmbuf_mtophys(mbuf));
+ 	sg->offset = data_offset;
+ 
+-	if (data_len <= (mbuf->data_len - data_offset)) {
++	if ((uint32_t)data_len <= (mbuf->data_len - (uint32_t)data_offset)) {
+ 		sg->length = data_len;
+ 	} else {
+ 		sg->length = mbuf->data_len - data_offset;
+@@ -783,7 +783,7 @@ static inline int is_decode(dpaa_sec_session *ses)
+ 			cpu_to_hw_sg(sg);
+ 			sg++;
+ 			qm_sg_entry_set64(sg, rte_pktmbuf_mtophys(mbuf));
+-			if (data_len > mbuf->data_len)
++			if ((uint32_t)data_len > mbuf->data_len)
+ 				sg->length = mbuf->data_len;
+ 			else
+ 				sg->length = data_len;
+diff --git a/drivers/crypto/nitrox/nitrox_sym_reqmgr.c b/drivers/crypto/nitrox/nitrox_sym_reqmgr.c
+index d9b4267..ba6ab02 100644
+--- a/drivers/crypto/nitrox/nitrox_sym_reqmgr.c
++++ b/drivers/crypto/nitrox/nitrox_sym_reqmgr.c
+@@ -324,8 +324,8 @@ struct nitrox_softreq {
+ 	cnt++;
+ 	datalen -= mlen;
+ 	for (m = m->next; m && datalen; m = m->next) {
+-		mlen = rte_pktmbuf_data_len(m) < datalen ?
+-			rte_pktmbuf_data_len(m) : datalen;
++		mlen = (uint32_t)rte_pktmbuf_data_len(m) < (uint32_t)datalen ?
++			(uint32_t)rte_pktmbuf_data_len(m) : (uint32_t)datalen;
+ 		sglist[cnt].len = mlen;
+ 		sglist[cnt].iova = rte_pktmbuf_mtophys(m);
+ 		sglist[cnt].virt = rte_pktmbuf_mtod(m, uint8_t *);
+diff --git a/drivers/mempool/octeontx/octeontx_fpavf.h b/drivers/mempool/octeontx/octeontx_fpavf.h
+index e27c437..0fd2547 100644
+--- a/drivers/mempool/octeontx/octeontx_fpavf.h
++++ b/drivers/mempool/octeontx/octeontx_fpavf.h
+@@ -47,7 +47,7 @@
+ #define FPA_AURA_SET_SIZE		16
+ 
+ #define FPA_MAX_OBJ_SIZE		(128 * 1024)
+-#define OCTEONTX_FPAVF_BUF_OFFSET	128
++#define OCTEONTX_FPAVF_BUF_OFFSET	192
+ 
+ /*
+  * In Cavium OCTEON TX SoC, all accesses to the device registers are
+diff --git a/drivers/net/af_packet/rte_eth_af_packet.c b/drivers/net/af_packet/rte_eth_af_packet.c
+index 22feb72..01de133 100644
+--- a/drivers/net/af_packet/rte_eth_af_packet.c
++++ b/drivers/net/af_packet/rte_eth_af_packet.c
+@@ -441,7 +441,7 @@ struct pmd_internals {
+ }
+ 
+ static int
+-eth_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
++eth_dev_mtu_set(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	struct pmd_internals *internals = dev->data->dev_private;
+ 	struct ifreq ifr = { .ifr_mtu = mtu };
+diff --git a/drivers/net/ark/ark_ethdev.c b/drivers/net/ark/ark_ethdev.c
+index c364201..b0a4923 100644
+--- a/drivers/net/ark/ark_ethdev.c
++++ b/drivers/net/ark/ark_ethdev.c
+@@ -48,7 +48,7 @@ static int eth_ark_macaddr_add(struct rte_eth_dev *dev,
+ 			       uint32_t pool);
+ static void eth_ark_macaddr_remove(struct rte_eth_dev *dev,
+ 				   uint32_t index);
+-static int  eth_ark_set_mtu(struct rte_eth_dev *dev, uint16_t size);
++static int  eth_ark_set_mtu(struct rte_eth_dev *dev, uint32_t size);
+ 
+ /*
+  * The packet generator is a functional block used to generate packet
+@@ -874,7 +874,7 @@ static void eth_ark_macaddr_remove(struct rte_eth_dev *dev,
+ }
+ 
+ static int
+-eth_ark_set_mtu(struct rte_eth_dev *dev, uint16_t  size)
++eth_ark_set_mtu(struct rte_eth_dev *dev, uint32_t  size)
+ {
+ 	struct ark_adapter *ark = dev->data->dev_private;
+ 
+diff --git a/drivers/net/ark/ark_ethdev_rx.c b/drivers/net/ark/ark_ethdev_rx.c
+index 4d518d5..f67e872 100644
+--- a/drivers/net/ark/ark_ethdev_rx.c
++++ b/drivers/net/ark/ark_ethdev_rx.c
+@@ -341,7 +341,8 @@ struct ark_rx_queue {
+ 	/* first buf populated by called */
+ 	mbuf_prev = mbuf0;
+ 	segments = 1;
+-	data_len = RTE_MIN(meta->pkt_len, RTE_MBUF_DEFAULT_DATAROOM);
++	data_len = RTE_MIN((uint32_t)meta->pkt_len,
++		(uint32_t)RTE_MBUF_DEFAULT_DATAROOM);
+ 	remaining = meta->pkt_len - data_len;
+ 	mbuf0->data_len = data_len;
+ 
+diff --git a/drivers/net/ark/ark_udm.h b/drivers/net/ark/ark_udm.h
+index 5846c82..3d9c11f 100644
+--- a/drivers/net/ark/ark_udm.h
++++ b/drivers/net/ark/ark_udm.h
+@@ -21,7 +21,7 @@ struct ark_rx_meta {
+ 	uint64_t user_data;
+ 	uint8_t port;
+ 	uint8_t dst_queue;
+-	uint16_t pkt_len;
++	uint32_t pkt_len;
+ };
+ 
+ /*
+diff --git a/drivers/net/atlantic/atl_ethdev.c b/drivers/net/atlantic/atl_ethdev.c
+index b2b3bd3..9331d55 100644
+--- a/drivers/net/atlantic/atl_ethdev.c
++++ b/drivers/net/atlantic/atl_ethdev.c
+@@ -47,7 +47,7 @@ static int atl_fw_version_get(struct rte_eth_dev *dev, char *fw_version,
+ 
+ static const uint32_t *atl_dev_supported_ptypes_get(struct rte_eth_dev *dev);
+ 
+-static int atl_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu);
++static int atl_dev_mtu_set(struct rte_eth_dev *dev, uint32_t mtu);
+ 
+ /* VLAN stuff */
+ static int atl_vlan_filter_set(struct rte_eth_dev *dev,
+@@ -1637,7 +1637,7 @@ int atl_dev_set_eeprom(struct rte_eth_dev *dev,
+ }
+ 
+ static int
+-atl_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
++atl_dev_mtu_set(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	struct rte_eth_dev_info dev_info;
+ 	int ret;
+diff --git a/drivers/net/bnxt/bnxt.h b/drivers/net/bnxt/bnxt.h
+index 586d3f5..b8c712f 100644
+--- a/drivers/net/bnxt/bnxt.h
++++ b/drivers/net/bnxt/bnxt.h
+@@ -720,7 +720,7 @@ struct bnxt {
+ 
+ #define BNXT_FC_TIMER	1 /* Timer freq in Sec Flow Counters */
+ 
+-int bnxt_mtu_set_op(struct rte_eth_dev *eth_dev, uint16_t new_mtu);
++int bnxt_mtu_set_op(struct rte_eth_dev *eth_dev, uint32_t new_mtu);
+ int bnxt_link_update(struct rte_eth_dev *eth_dev, int wait_to_complete,
+ 		     bool exp_link_status);
+ int bnxt_rcv_msg_from_vf(struct bnxt *bp, uint16_t vf_id, void *msg);
+diff --git a/drivers/net/bnxt/bnxt_ethdev.c b/drivers/net/bnxt/bnxt_ethdev.c
+index c2bee54..f50deec 100644
+--- a/drivers/net/bnxt/bnxt_ethdev.c
++++ b/drivers/net/bnxt/bnxt_ethdev.c
+@@ -2460,7 +2460,7 @@ static int bnxt_free_one_vnic(struct bnxt *bp, uint16_t vnic_id)
+ 	qinfo->conf.tx_deferred_start = txq->tx_deferred_start;
+ }
+ 
+-int bnxt_mtu_set_op(struct rte_eth_dev *eth_dev, uint16_t new_mtu)
++int bnxt_mtu_set_op(struct rte_eth_dev *eth_dev, uint32_t new_mtu)
+ {
+ 	struct bnxt *bp = eth_dev->data->dev_private;
+ 	uint32_t new_pkt_size;
+diff --git a/drivers/net/bonding/rte_eth_bond_pmd.c b/drivers/net/bonding/rte_eth_bond_pmd.c
+index 612a645..c1fbd36 100644
+--- a/drivers/net/bonding/rte_eth_bond_pmd.c
++++ b/drivers/net/bonding/rte_eth_bond_pmd.c
+@@ -3025,7 +3025,7 @@ struct bwg_slave {
+ }
+ 
+ static int
+-bond_ethdev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
++bond_ethdev_mtu_set(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	struct rte_eth_dev *slave_eth_dev;
+ 	struct bond_dev_private *internals = dev->data->dev_private;
+diff --git a/drivers/net/cxgbe/cxgbe_ethdev.c b/drivers/net/cxgbe/cxgbe_ethdev.c
+index 1deee2f..6d3bb3e 100644
+--- a/drivers/net/cxgbe/cxgbe_ethdev.c
++++ b/drivers/net/cxgbe/cxgbe_ethdev.c
+@@ -283,7 +283,7 @@ int cxgbe_dev_set_link_down(struct rte_eth_dev *dev)
+ 	return 0;
+ }
+ 
+-int cxgbe_dev_mtu_set(struct rte_eth_dev *eth_dev, uint16_t mtu)
++int cxgbe_dev_mtu_set(struct rte_eth_dev *eth_dev, uint32_t mtu)
+ {
+ 	struct port_info *pi = eth_dev->data->dev_private;
+ 	struct adapter *adapter = pi->adapter;
+diff --git a/drivers/net/cxgbe/cxgbe_pfvf.h b/drivers/net/cxgbe/cxgbe_pfvf.h
+index 0b7c52a..d228d7d 100644
+--- a/drivers/net/cxgbe/cxgbe_pfvf.h
++++ b/drivers/net/cxgbe/cxgbe_pfvf.h
+@@ -41,7 +41,7 @@ int cxgbe_dev_rx_queue_start(struct rte_eth_dev *eth_dev,
+ 			     uint16_t tx_queue_id);
+ int cxgbe_dev_tx_queue_stop(struct rte_eth_dev *eth_dev, uint16_t tx_queue_id);
+ int cxgbe_dev_rx_queue_stop(struct rte_eth_dev *eth_dev, uint16_t rx_queue_id);
+-int cxgbe_dev_mtu_set(struct rte_eth_dev *eth_dev, uint16_t mtu);
++int cxgbe_dev_mtu_set(struct rte_eth_dev *eth_dev, uint32_t mtu);
+ int cxgbe_dev_start(struct rte_eth_dev *eth_dev);
+ int cxgbe_dev_link_update(struct rte_eth_dev *eth_dev,
+ 			  int wait_to_complete);
+diff --git a/drivers/net/dpaa/dpaa_ethdev.c b/drivers/net/dpaa/dpaa_ethdev.c
+index 5f81968..c0f98f5 100644
+--- a/drivers/net/dpaa/dpaa_ethdev.c
++++ b/drivers/net/dpaa/dpaa_ethdev.c
+@@ -144,7 +144,7 @@ struct rte_dpaa_xstats_name_off {
+ }
+ 
+ static int
+-dpaa_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
++dpaa_mtu_set(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	struct dpaa_if *dpaa_intf = dev->data->dev_private;
+ 	uint32_t frame_size = mtu + RTE_ETHER_HDR_LEN + RTE_ETHER_CRC_LEN
+diff --git a/drivers/net/dpaa2/dpaa2_ethdev.c b/drivers/net/dpaa2/dpaa2_ethdev.c
+index 2cde55e..341dfa0 100644
+--- a/drivers/net/dpaa2/dpaa2_ethdev.c
++++ b/drivers/net/dpaa2/dpaa2_ethdev.c
+@@ -104,7 +104,7 @@ static int dpaa2_dev_link_update(struct rte_eth_dev *dev,
+ 				 int wait_to_complete);
+ static int dpaa2_dev_set_link_up(struct rte_eth_dev *dev);
+ static int dpaa2_dev_set_link_down(struct rte_eth_dev *dev);
+-static int dpaa2_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu);
++static int dpaa2_dev_mtu_set(struct rte_eth_dev *dev, uint32_t mtu);
+ 
+ int dpaa2_logtype_pmd;
+ 
+@@ -1269,7 +1269,7 @@ static int dpaa2_dev_link_update(struct rte_eth_dev *dev,
+ }
+ 
+ static int
+-dpaa2_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
++dpaa2_dev_mtu_set(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	int ret;
+ 	struct dpaa2_dev_priv *priv = dev->data->dev_private;
+diff --git a/drivers/net/e1000/em_ethdev.c b/drivers/net/e1000/em_ethdev.c
+index 188cda3..4eb1dfd 100644
+--- a/drivers/net/e1000/em_ethdev.c
++++ b/drivers/net/e1000/em_ethdev.c
+@@ -64,7 +64,7 @@ static int eth_em_interrupt_action(struct rte_eth_dev *dev,
+ static void em_init_manageability(struct e1000_hw *hw);
+ static void em_release_manageability(struct e1000_hw *hw);
+ 
+-static int eth_em_mtu_set(struct rte_eth_dev *dev, uint16_t mtu);
++static int eth_em_mtu_set(struct rte_eth_dev *dev, uint32_t mtu);
+ 
+ static int eth_em_vlan_filter_set(struct rte_eth_dev *dev,
+ 		uint16_t vlan_id, int on);
+@@ -1783,7 +1783,7 @@ static int eth_em_pci_remove(struct rte_pci_device *pci_dev)
+ }
+ 
+ static int
+-eth_em_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
++eth_em_mtu_set(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	struct rte_eth_dev_info dev_info;
+ 	struct e1000_hw *hw;
+diff --git a/drivers/net/e1000/igb_ethdev.c b/drivers/net/e1000/igb_ethdev.c
+index 520fba8..f5656c1 100644
+--- a/drivers/net/e1000/igb_ethdev.c
++++ b/drivers/net/e1000/igb_ethdev.c
+@@ -123,7 +123,7 @@ static int eth_igb_interrupt_action(struct rte_eth_dev *dev,
+ static void igb_init_manageability(struct e1000_hw *hw);
+ static void igb_release_manageability(struct e1000_hw *hw);
+ 
+-static int  eth_igb_mtu_set(struct rte_eth_dev *dev, uint16_t mtu);
++static int  eth_igb_mtu_set(struct rte_eth_dev *dev, uint32_t mtu);
+ 
+ static int eth_igb_vlan_filter_set(struct rte_eth_dev *dev,
+ 		uint16_t vlan_id, int on);
+@@ -4511,7 +4511,7 @@ static void igbvf_set_vfta_all(struct rte_eth_dev *dev, bool on)
+ }
+ 
+ static int
+-eth_igb_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
++eth_igb_mtu_set(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	uint32_t rctl;
+ 	struct e1000_hw *hw;
+diff --git a/drivers/net/ena/ena_ethdev.c b/drivers/net/ena/ena_ethdev.c
+index c3fd3a4..e22ae03 100644
+--- a/drivers/net/ena/ena_ethdev.c
++++ b/drivers/net/ena/ena_ethdev.c
+@@ -200,7 +200,7 @@ static int ena_add_single_rx_desc(struct ena_com_io_sq *io_sq,
+ static int ena_populate_rx_queue(struct ena_ring *rxq, unsigned int count);
+ static void ena_init_rings(struct ena_adapter *adapter,
+ 			   bool disable_meta_caching);
+-static int ena_mtu_set(struct rte_eth_dev *dev, uint16_t mtu);
++static int ena_mtu_set(struct rte_eth_dev *dev, uint32_t mtu);
+ static int ena_start(struct rte_eth_dev *dev);
+ static void ena_stop(struct rte_eth_dev *dev);
+ static void ena_close(struct rte_eth_dev *dev);
+@@ -1015,7 +1015,7 @@ static int ena_stats_get(struct rte_eth_dev *dev,
+ 	return 0;
+ }
+ 
+-static int ena_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
++static int ena_mtu_set(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	struct ena_adapter *adapter;
+ 	struct ena_com_dev *ena_dev;
+diff --git a/drivers/net/enetc/enetc_ethdev.c b/drivers/net/enetc/enetc_ethdev.c
+index 1716e11..68458bc 100644
+--- a/drivers/net/enetc/enetc_ethdev.c
++++ b/drivers/net/enetc/enetc_ethdev.c
+@@ -645,7 +645,7 @@ int enetc_stats_get(struct rte_eth_dev *dev,
+ }
+ 
+ static int
+-enetc_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
++enetc_mtu_set(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	struct enetc_eth_hw *hw =
+ 		ENETC_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+diff --git a/drivers/net/enic/enic_ethdev.c b/drivers/net/enic/enic_ethdev.c
+index 32d5397..95132c4 100644
+--- a/drivers/net/enic/enic_ethdev.c
++++ b/drivers/net/enic/enic_ethdev.c
+@@ -825,7 +825,7 @@ static int enicpmd_set_mc_addr_list(struct rte_eth_dev *eth_dev,
+ 	return 0;
+ }
+ 
+-static int enicpmd_mtu_set(struct rte_eth_dev *eth_dev, uint16_t mtu)
++static int enicpmd_mtu_set(struct rte_eth_dev *eth_dev, uint32_t mtu)
+ {
+ 	struct enic *enic = pmd_priv(eth_dev);
+ 
+diff --git a/drivers/net/failsafe/failsafe_ops.c b/drivers/net/failsafe/failsafe_ops.c
+index 50f2aca..367a2f2 100644
+--- a/drivers/net/failsafe/failsafe_ops.c
++++ b/drivers/net/failsafe/failsafe_ops.c
+@@ -1222,7 +1222,7 @@
+ }
+ 
+ static int
+-fs_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
++fs_mtu_set(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	struct sub_device *sdev;
+ 	uint8_t i;
+diff --git a/drivers/net/fm10k/fm10k_rxtx_vec.c b/drivers/net/fm10k/fm10k_rxtx_vec.c
+index eff3933..b6fa268 100644
+--- a/drivers/net/fm10k/fm10k_rxtx_vec.c
++++ b/drivers/net/fm10k/fm10k_rxtx_vec.c
+@@ -440,9 +440,9 @@
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
+ 			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, vlan_tci) !=
+-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 10);
+-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
+ 			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 12);
++	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
++			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 16);
+ 
+ 	/* Cache is empty -> need to scan the buffer rings, but first move
+ 	 * the next 'n' mbufs into the cache
+diff --git a/drivers/net/hinic/hinic_pmd_ethdev.c b/drivers/net/hinic/hinic_pmd_ethdev.c
+index cfbca64..5815cbd 100644
+--- a/drivers/net/hinic/hinic_pmd_ethdev.c
++++ b/drivers/net/hinic/hinic_pmd_ethdev.c
+@@ -1527,7 +1527,7 @@ static void hinic_deinit_mac_addr(struct rte_eth_dev *eth_dev)
+ 	hinic_delete_mc_addr_list(nic_dev);
+ }
+ 
+-static int hinic_dev_set_mtu(struct rte_eth_dev *dev, uint16_t mtu)
++static int hinic_dev_set_mtu(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	int ret = 0;
+ 	struct hinic_nic_dev *nic_dev = HINIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+diff --git a/drivers/net/hns3/hns3_ethdev.c b/drivers/net/hns3/hns3_ethdev.c
+index c314d37..4eca4f8 100644
+--- a/drivers/net/hns3/hns3_ethdev.c
++++ b/drivers/net/hns3/hns3_ethdev.c
+@@ -74,7 +74,7 @@ enum hns3_evt_cause {
+ 
+ static enum hns3_reset_level hns3_get_reset_level(struct hns3_adapter *hns,
+ 						 uint64_t *levels);
+-static int hns3_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu);
++static int hns3_dev_mtu_set(struct rte_eth_dev *dev, uint32_t mtu);
+ static int hns3_vlan_pvid_configure(struct hns3_adapter *hns, uint16_t pvid,
+ 				    int on);
+ static int hns3_update_speed_duplex(struct rte_eth_dev *eth_dev);
+@@ -2383,7 +2383,7 @@ static int hns3_remove_mc_addr(struct hns3_hw *hw,
+ }
+ 
+ static int
+-hns3_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
++hns3_dev_mtu_set(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	struct hns3_adapter *hns = dev->data->dev_private;
+ 	uint32_t frame_size = mtu + HNS3_ETH_OVERHEAD;
+diff --git a/drivers/net/hns3/hns3_ethdev_vf.c b/drivers/net/hns3/hns3_ethdev_vf.c
+index 9363187..9444cab 100644
+--- a/drivers/net/hns3/hns3_ethdev_vf.c
++++ b/drivers/net/hns3/hns3_ethdev_vf.c
+@@ -56,7 +56,7 @@ enum hns3vf_evt_cause {
+ 
+ static enum hns3_reset_level hns3vf_get_reset_level(struct hns3_hw *hw,
+ 						    uint64_t *levels);
+-static int hns3vf_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu);
++static int hns3vf_dev_mtu_set(struct rte_eth_dev *dev, uint32_t mtu);
+ static int hns3vf_dev_configure_vlan(struct rte_eth_dev *dev);
+ 
+ static int hns3vf_add_mc_mac_addr(struct hns3_hw *hw,
+@@ -839,7 +839,7 @@ static int hns3vf_remove_mc_mac_addr(struct hns3_hw *hw,
+ }
+ 
+ static int
+-hns3vf_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
++hns3vf_dev_mtu_set(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	struct hns3_hw *hw = HNS3_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+ 	uint32_t frame_size = mtu + HNS3_ETH_OVERHEAD;
+diff --git a/drivers/net/i40e/i40e_ethdev.c b/drivers/net/i40e/i40e_ethdev.c
+index 749d85f..25b4496 100644
+--- a/drivers/net/i40e/i40e_ethdev.c
++++ b/drivers/net/i40e/i40e_ethdev.c
+@@ -378,7 +378,7 @@ static int i40e_get_module_eeprom(struct rte_eth_dev *dev,
+ static int i40e_set_default_mac_addr(struct rte_eth_dev *dev,
+ 				      struct rte_ether_addr *mac_addr);
+ 
+-static int i40e_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu);
++static int i40e_dev_mtu_set(struct rte_eth_dev *dev, uint32_t mtu);
+ 
+ static int i40e_ethertype_filter_convert(
+ 	const struct rte_eth_ethertype_filter *input,
+@@ -12214,7 +12214,7 @@ static int i40e_set_default_mac_addr(struct rte_eth_dev *dev,
+ }
+ 
+ static int
+-i40e_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
++i40e_dev_mtu_set(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
+ 	struct rte_eth_dev_data *dev_data = pf->dev_data;
+diff --git a/drivers/net/i40e/i40e_ethdev_vf.c b/drivers/net/i40e/i40e_ethdev_vf.c
+index bb5d28a..dd10807 100644
+--- a/drivers/net/i40e/i40e_ethdev_vf.c
++++ b/drivers/net/i40e/i40e_ethdev_vf.c
+@@ -121,7 +121,7 @@ static int i40evf_dev_rss_hash_update(struct rte_eth_dev *dev,
+ 				      struct rte_eth_rss_conf *rss_conf);
+ static int i40evf_dev_rss_hash_conf_get(struct rte_eth_dev *dev,
+ 					struct rte_eth_rss_conf *rss_conf);
+-static int i40evf_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu);
++static int i40evf_dev_mtu_set(struct rte_eth_dev *dev, uint32_t mtu);
+ static int i40evf_set_default_mac_addr(struct rte_eth_dev *dev,
+ 					struct rte_ether_addr *mac_addr);
+ static int
+@@ -2745,7 +2745,7 @@ static int eth_i40evf_pci_remove(struct rte_pci_device *pci_dev)
+ }
+ 
+ static int
+-i40evf_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
++i40evf_dev_mtu_set(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	struct i40e_vf *vf = I40EVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
+ 	struct rte_eth_dev_data *dev_data = vf->dev_data;
+diff --git a/drivers/net/i40e/i40e_rxtx_vec_avx2.c b/drivers/net/i40e/i40e_rxtx_vec_avx2.c
+index 3bcef13..73c8c4c 100644
+--- a/drivers/net/i40e/i40e_rxtx_vec_avx2.c
++++ b/drivers/net/i40e/i40e_rxtx_vec_avx2.c
+@@ -302,9 +302,9 @@
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
+ 			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, vlan_tci) !=
+-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 10);
+-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
+ 			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 12);
++	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
++			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 16);
+ 
+ 	/* Status/Error flag masks */
+ 	/*
+@@ -631,7 +631,7 @@
+ 		 */
+ 		/* check the structure matches expectations */
+ 		RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, ol_flags) !=
+-				offsetof(struct rte_mbuf, rearm_data) + 8);
++				offsetof(struct rte_mbuf, rearm_data) + 16);
+ 		RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, rearm_data) !=
+ 				RTE_ALIGN(offsetof(struct rte_mbuf, rearm_data), 16));
+ 		/* build up data and do writes */
+diff --git a/drivers/net/i40e/i40e_rxtx_vec_sse.c b/drivers/net/i40e/i40e_rxtx_vec_sse.c
+index 6985183..c827e1d 100644
+--- a/drivers/net/i40e/i40e_rxtx_vec_sse.c
++++ b/drivers/net/i40e/i40e_rxtx_vec_sse.c
+@@ -315,7 +315,7 @@
+ 
+ 	/* write the rearm data and the olflags in one write */
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, ol_flags) !=
+-			offsetof(struct rte_mbuf, rearm_data) + 8);
++			offsetof(struct rte_mbuf, rearm_data) + 16);
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, rearm_data) !=
+ 			RTE_ALIGN(offsetof(struct rte_mbuf, rearm_data), 16));
+ 	_mm_store_si128((__m128i *)&rx_pkts[0]->rearm_data, rearm0);
+@@ -430,9 +430,9 @@
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
+ 			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, vlan_tci) !=
+-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 10);
+-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
+ 			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 12);
++	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
++			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 16);
+ 
+ 	/* Cache is empty -> need to scan the buffer rings, but first move
+ 	 * the next 'n' mbufs into the cache
+diff --git a/drivers/net/iavf/iavf_ethdev.c b/drivers/net/iavf/iavf_ethdev.c
+index 117fbc5..aee7335 100644
+--- a/drivers/net/iavf/iavf_ethdev.c
++++ b/drivers/net/iavf/iavf_ethdev.c
+@@ -62,7 +62,7 @@ static int iavf_dev_rss_hash_update(struct rte_eth_dev *dev,
+ 				   struct rte_eth_rss_conf *rss_conf);
+ static int iavf_dev_rss_hash_conf_get(struct rte_eth_dev *dev,
+ 				     struct rte_eth_rss_conf *rss_conf);
+-static int iavf_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu);
++static int iavf_dev_mtu_set(struct rte_eth_dev *dev, uint32_t mtu);
+ static int iavf_dev_set_default_mac_addr(struct rte_eth_dev *dev,
+ 					 struct rte_ether_addr *mac_addr);
+ static int iavf_dev_rx_queue_intr_enable(struct rte_eth_dev *dev,
+@@ -943,7 +943,7 @@ static int iavf_config_rx_queues_irqs(struct rte_eth_dev *dev,
+ }
+ 
+ static int
+-iavf_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
++iavf_dev_mtu_set(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	uint32_t frame_size = mtu + IAVF_ETH_OVERHEAD;
+ 	int ret = 0;
+diff --git a/drivers/net/iavf/iavf_rxtx_vec_avx2.c b/drivers/net/iavf/iavf_rxtx_vec_avx2.c
+index e5e0fd3..90abe40 100644
+--- a/drivers/net/iavf/iavf_rxtx_vec_avx2.c
++++ b/drivers/net/iavf/iavf_rxtx_vec_avx2.c
+@@ -223,9 +223,9 @@
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
+ 			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, vlan_tci) !=
+-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 10);
+-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
+ 			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 12);
++	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
++			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 16);
+ 
+ 	/* Status/Error flag masks */
+ 	/**
+@@ -485,7 +485,7 @@
+ 		 */
+ 		/* check the structure matches expectations */
+ 		RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, ol_flags) !=
+-				 offsetof(struct rte_mbuf, rearm_data) + 8);
++				 offsetof(struct rte_mbuf, rearm_data) + 16);
+ 		RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, rearm_data) !=
+ 				 RTE_ALIGN(offsetof(struct rte_mbuf,
+ 						    rearm_data),
+@@ -722,9 +722,9 @@
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
+ 			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, vlan_tci) !=
+-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 10);
+-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
+ 			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 12);
++	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
++			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 16);
+ 
+ 	/* Status/Error flag masks */
+ 	/**
+@@ -1094,7 +1094,7 @@
+ 		 */
+ 		/* check the structure matches expectations */
+ 		RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, ol_flags) !=
+-				 offsetof(struct rte_mbuf, rearm_data) + 8);
++				 offsetof(struct rte_mbuf, rearm_data) + 16);
+ 		RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, rearm_data) !=
+ 				 RTE_ALIGN(offsetof(struct rte_mbuf,
+ 						    rearm_data),
+diff --git a/drivers/net/iavf/iavf_rxtx_vec_sse.c b/drivers/net/iavf/iavf_rxtx_vec_sse.c
+index 85c5bd4..6fc42dd 100644
+--- a/drivers/net/iavf/iavf_rxtx_vec_sse.c
++++ b/drivers/net/iavf/iavf_rxtx_vec_sse.c
+@@ -180,7 +180,7 @@
+ 
+ 	/* write the rearm data and the olflags in one write */
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, ol_flags) !=
+-			offsetof(struct rte_mbuf, rearm_data) + 8);
++			offsetof(struct rte_mbuf, rearm_data) + 16);
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, rearm_data) !=
+ 			RTE_ALIGN(offsetof(struct rte_mbuf, rearm_data), 16));
+ 	_mm_store_si128((__m128i *)&rx_pkts[0]->rearm_data, rearm0);
+@@ -332,7 +332,7 @@
+ 
+ 	/* write the rearm data and the olflags in one write */
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, ol_flags) !=
+-			 offsetof(struct rte_mbuf, rearm_data) + 8);
++			 offsetof(struct rte_mbuf, rearm_data) + 16);
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, rearm_data) !=
+ 			 RTE_ALIGN(offsetof(struct rte_mbuf, rearm_data), 16));
+ 	_mm_store_si128((__m128i *)&rx_pkts[0]->rearm_data, rearm0);
+@@ -463,9 +463,9 @@
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
+ 			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, vlan_tci) !=
+-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 10);
+-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
+ 			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 12);
++	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
++			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 16);
+ 
+ 	/* Cache is empty -> need to scan the buffer rings, but first move
+ 	 * the next 'n' mbufs into the cache
+@@ -724,9 +724,9 @@
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
+ 			 offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, vlan_tci) !=
+-			 offsetof(struct rte_mbuf, rx_descriptor_fields1) + 10);
+-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
+ 			 offsetof(struct rte_mbuf, rx_descriptor_fields1) + 12);
++	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
++			 offsetof(struct rte_mbuf, rx_descriptor_fields1) + 16);
+ 
+ 	/* Cache is empty -> need to scan the buffer rings, but first move
+ 	 * the next 'n' mbufs into the cache
+diff --git a/drivers/net/ice/ice_ethdev.c b/drivers/net/ice/ice_ethdev.c
+index d5110c4..a30eed1 100644
+--- a/drivers/net/ice/ice_ethdev.c
++++ b/drivers/net/ice/ice_ethdev.c
+@@ -95,7 +95,7 @@ static int ice_link_update(struct rte_eth_dev *dev,
+ static int ice_dev_set_link_up(struct rte_eth_dev *dev);
+ static int ice_dev_set_link_down(struct rte_eth_dev *dev);
+ 
+-static int ice_mtu_set(struct rte_eth_dev *dev, uint16_t mtu);
++static int ice_mtu_set(struct rte_eth_dev *dev, uint32_t mtu);
+ static int ice_vlan_offload_set(struct rte_eth_dev *dev, int mask);
+ static int ice_rss_reta_update(struct rte_eth_dev *dev,
+ 			       struct rte_eth_rss_reta_entry64 *reta_conf,
+@@ -3198,7 +3198,7 @@ static int ice_init_rss(struct ice_pf *pf)
+ }
+ 
+ static int
+-ice_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
++ice_mtu_set(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	struct ice_pf *pf = ICE_DEV_PRIVATE_TO_PF(dev->data->dev_private);
+ 	struct rte_eth_dev_data *dev_data = pf->dev_data;
+diff --git a/drivers/net/ice/ice_rxtx_vec_avx2.c b/drivers/net/ice/ice_rxtx_vec_avx2.c
+index be50677..f236c47 100644
+--- a/drivers/net/ice/ice_rxtx_vec_avx2.c
++++ b/drivers/net/ice/ice_rxtx_vec_avx2.c
+@@ -219,9 +219,9 @@
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
+ 			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, vlan_tci) !=
+-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 10);
+-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
+ 			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 12);
++	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
++			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 16);
+ 
+ 	/* Status/Error flag masks */
+ 	/**
+@@ -474,7 +474,7 @@
+ 		 */
+ 		/* check the structure matches expectations */
+ 		RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, ol_flags) !=
+-				 offsetof(struct rte_mbuf, rearm_data) + 8);
++				 offsetof(struct rte_mbuf, rearm_data) + 16);
+ 		RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, rearm_data) !=
+ 				 RTE_ALIGN(offsetof(struct rte_mbuf,
+ 						    rearm_data),
+diff --git a/drivers/net/ice/ice_rxtx_vec_sse.c b/drivers/net/ice/ice_rxtx_vec_sse.c
+index 382ef31..0511354 100644
+--- a/drivers/net/ice/ice_rxtx_vec_sse.c
++++ b/drivers/net/ice/ice_rxtx_vec_sse.c
+@@ -175,7 +175,7 @@
+ 
+ 	/* write the rearm data and the olflags in one write */
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, ol_flags) !=
+-			 offsetof(struct rte_mbuf, rearm_data) + 8);
++			 offsetof(struct rte_mbuf, rearm_data) + 16);
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, rearm_data) !=
+ 			 RTE_ALIGN(offsetof(struct rte_mbuf, rearm_data), 16));
+ 	_mm_store_si128((__m128i *)&rx_pkts[0]->rearm_data, rearm0);
+@@ -300,9 +300,9 @@
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
+ 			 offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, vlan_tci) !=
+-			 offsetof(struct rte_mbuf, rx_descriptor_fields1) + 10);
+-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
+ 			 offsetof(struct rte_mbuf, rx_descriptor_fields1) + 12);
++	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
++			 offsetof(struct rte_mbuf, rx_descriptor_fields1) + 16);
+ 
+ 	/* Cache is empty -> need to scan the buffer rings, but first move
+ 	 * the next 'n' mbufs into the cache
+diff --git a/drivers/net/igc/igc_ethdev.c b/drivers/net/igc/igc_ethdev.c
+index 16d98c6..f8a4119 100644
+--- a/drivers/net/igc/igc_ethdev.c
++++ b/drivers/net/igc/igc_ethdev.c
+@@ -204,7 +204,7 @@ static int eth_igc_set_mc_addr_list(struct rte_eth_dev *dev,
+ 			 uint32_t nb_mc_addr);
+ static int eth_igc_allmulticast_enable(struct rte_eth_dev *dev);
+ static int eth_igc_allmulticast_disable(struct rte_eth_dev *dev);
+-static int eth_igc_mtu_set(struct rte_eth_dev *dev, uint16_t mtu);
++static int eth_igc_mtu_set(struct rte_eth_dev *dev, uint32_t mtu);
+ static int eth_igc_stats_get(struct rte_eth_dev *dev,
+ 			struct rte_eth_stats *rte_stats);
+ static int eth_igc_xstats_get(struct rte_eth_dev *dev,
+@@ -1575,7 +1575,7 @@ static int eth_igc_vlan_tpid_set(struct rte_eth_dev *dev,
+ }
+ 
+ static int
+-eth_igc_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
++eth_igc_mtu_set(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	struct igc_hw *hw = IGC_DEV_PRIVATE_HW(dev);
+ 	uint32_t frame_size = mtu + IGC_ETH_OVERHEAD;
+diff --git a/drivers/net/ionic/ionic_ethdev.c b/drivers/net/ionic/ionic_ethdev.c
+index 363f0cf..129e68f 100644
+--- a/drivers/net/ionic/ionic_ethdev.c
++++ b/drivers/net/ionic/ionic_ethdev.c
+@@ -22,7 +22,7 @@
+ static int  ionic_dev_info_get(struct rte_eth_dev *eth_dev,
+ 	struct rte_eth_dev_info *dev_info);
+ static int  ionic_dev_configure(struct rte_eth_dev *dev);
+-static int  ionic_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu);
++static int  ionic_dev_mtu_set(struct rte_eth_dev *dev, uint32_t mtu);
+ static int  ionic_dev_start(struct rte_eth_dev *dev);
+ static void ionic_dev_stop(struct rte_eth_dev *dev);
+ static void ionic_dev_close(struct rte_eth_dev *dev);
+@@ -352,7 +352,7 @@ struct rte_ionic_xstats_name_off {
+ }
+ 
+ static int
+-ionic_dev_mtu_set(struct rte_eth_dev *eth_dev, uint16_t mtu)
++ionic_dev_mtu_set(struct rte_eth_dev *eth_dev, uint32_t mtu)
+ {
+ 	struct ionic_lif *lif = IONIC_ETH_DEV_TO_LIF(eth_dev);
+ 	uint32_t max_frame_size;
+diff --git a/drivers/net/ixgbe/ixgbe_ethdev.c b/drivers/net/ixgbe/ixgbe_ethdev.c
+index aa1e8aa..69427bb 100644
+--- a/drivers/net/ixgbe/ixgbe_ethdev.c
++++ b/drivers/net/ixgbe/ixgbe_ethdev.c
+@@ -187,7 +187,7 @@ static int ixgbe_dev_info_get(struct rte_eth_dev *dev,
+ static const uint32_t *ixgbe_dev_supported_ptypes_get(struct rte_eth_dev *dev);
+ static int ixgbevf_dev_info_get(struct rte_eth_dev *dev,
+ 				struct rte_eth_dev_info *dev_info);
+-static int ixgbe_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu);
++static int ixgbe_dev_mtu_set(struct rte_eth_dev *dev, uint32_t mtu);
+ 
+ static int ixgbe_vlan_filter_set(struct rte_eth_dev *dev,
+ 		uint16_t vlan_id, int on);
+@@ -323,7 +323,7 @@ static int ixgbe_dev_filter_ctrl(struct rte_eth_dev *dev,
+ 		     enum rte_filter_type filter_type,
+ 		     enum rte_filter_op filter_op,
+ 		     void *arg);
+-static int ixgbevf_dev_set_mtu(struct rte_eth_dev *dev, uint16_t mtu);
++static int ixgbevf_dev_set_mtu(struct rte_eth_dev *dev, uint32_t mtu);
+ 
+ static int ixgbe_dev_set_mc_addr_list(struct rte_eth_dev *dev,
+ 				      struct rte_ether_addr *mc_addr_set,
+@@ -5169,7 +5169,7 @@ static int ixgbevf_dev_xstats_get_names(__rte_unused struct rte_eth_dev *dev,
+ }
+ 
+ static int
+-ixgbe_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
++ixgbe_dev_mtu_set(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	uint32_t hlreg0;
+ 	uint32_t maxfrs;
+@@ -6600,7 +6600,7 @@ static void ixgbevf_set_vfta_all(struct rte_eth_dev *dev, bool on)
+ }
+ 
+ static int
+-ixgbevf_dev_set_mtu(struct rte_eth_dev *dev, uint16_t mtu)
++ixgbevf_dev_set_mtu(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	struct ixgbe_hw *hw;
+ 	uint32_t max_frame = mtu + IXGBE_ETH_OVERHEAD;
+diff --git a/drivers/net/ixgbe/ixgbe_rxtx_vec_sse.c b/drivers/net/ixgbe/ixgbe_rxtx_vec_sse.c
+index 517ca31..df53933 100644
+--- a/drivers/net/ixgbe/ixgbe_rxtx_vec_sse.c
++++ b/drivers/net/ixgbe/ixgbe_rxtx_vec_sse.c
+@@ -231,7 +231,7 @@
+ 
+ 	/* write the rearm data and the olflags in one write */
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, ol_flags) !=
+-			offsetof(struct rte_mbuf, rearm_data) + 8);
++			offsetof(struct rte_mbuf, rearm_data) + 16);
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, rearm_data) !=
+ 			RTE_ALIGN(offsetof(struct rte_mbuf, rearm_data), 16));
+ 	_mm_store_si128((__m128i *)&rx_pkts[0]->rearm_data, rearm0);
+@@ -396,9 +396,9 @@ static inline uint32_t get_packet_type(int index,
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_len) !=
+ 			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 8);
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, vlan_tci) !=
+-			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 10);
+-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
+ 			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 12);
++	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, hash) !=
++			offsetof(struct rte_mbuf, rx_descriptor_fields1) + 16);
+ 
+ 	mbuf_init = _mm_set_epi64x(0, rxq->mbuf_initializer);
+ 
+diff --git a/drivers/net/liquidio/lio_ethdev.c b/drivers/net/liquidio/lio_ethdev.c
+index ad4a51e..fd91da2 100644
+--- a/drivers/net/liquidio/lio_ethdev.c
++++ b/drivers/net/liquidio/lio_ethdev.c
+@@ -434,7 +434,7 @@ struct rte_lio_xstats_name_off {
+ }
+ 
+ static int
+-lio_dev_mtu_set(struct rte_eth_dev *eth_dev, uint16_t mtu)
++lio_dev_mtu_set(struct rte_eth_dev *eth_dev, uint32_t mtu)
+ {
+ 	struct lio_device *lio_dev = LIO_DEV(eth_dev);
+ 	uint16_t pf_mtu = lio_dev->linfo.link.s.mtu;
+diff --git a/drivers/net/nfp/nfp_net.c b/drivers/net/nfp/nfp_net.c
+index 2460ee1..c11bf8b 100644
+--- a/drivers/net/nfp/nfp_net.c
++++ b/drivers/net/nfp/nfp_net.c
+@@ -54,7 +54,7 @@
+ static int nfp_net_configure(struct rte_eth_dev *dev);
+ static void nfp_net_dev_interrupt_handler(void *param);
+ static void nfp_net_dev_interrupt_delayed_handler(void *param);
+-static int nfp_net_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu);
++static int nfp_net_dev_mtu_set(struct rte_eth_dev *dev, uint32_t mtu);
+ static int nfp_net_infos_get(struct rte_eth_dev *dev,
+ 			     struct rte_eth_dev_info *dev_info);
+ static int nfp_net_init(struct rte_eth_dev *eth_dev);
+@@ -1469,7 +1469,7 @@ enum nfp_qcp_ptr {
+ }
+ 
+ static int
+-nfp_net_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
++nfp_net_dev_mtu_set(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	struct nfp_net_hw *hw;
+ 
+diff --git a/drivers/net/null/rte_eth_null.c b/drivers/net/null/rte_eth_null.c
+index 11258cc..387d3b8 100644
+--- a/drivers/net/null/rte_eth_null.c
++++ b/drivers/net/null/rte_eth_null.c
+@@ -271,7 +271,7 @@ struct pmd_internals {
+ }
+ 
+ static int
+-eth_mtu_set(struct rte_eth_dev *dev __rte_unused, uint16_t mtu __rte_unused)
++eth_mtu_set(struct rte_eth_dev *dev __rte_unused, uint32_t mtu __rte_unused)
+ {
+ 	return 0;
+ }
+diff --git a/drivers/net/octeontx/octeontx_ethdev.c b/drivers/net/octeontx/octeontx_ethdev.c
+index ea3b278..c5a2ae4 100644
+--- a/drivers/net/octeontx/octeontx_ethdev.c
++++ b/drivers/net/octeontx/octeontx_ethdev.c
+@@ -535,7 +535,7 @@ enum octeontx_link_speed {
+ }
+ 
+ static int
+-octeontx_dev_mtu_set(struct rte_eth_dev *eth_dev, uint16_t mtu)
++octeontx_dev_mtu_set(struct rte_eth_dev *eth_dev, uint32_t mtu)
+ {
+ 	uint32_t buffsz, frame_size = mtu + OCCTX_L2_OVERHEAD;
+ 	struct octeontx_nic *nic = octeontx_pmd_priv(eth_dev);
+diff --git a/drivers/net/octeontx2/otx2_ethdev.c b/drivers/net/octeontx2/otx2_ethdev.c
+index 3116e5c..f5407cc 100644
+--- a/drivers/net/octeontx2/otx2_ethdev.c
++++ b/drivers/net/octeontx2/otx2_ethdev.c
+@@ -459,11 +459,11 @@
+ 
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_off) % 8 != 0);
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, refcnt) -
+-				offsetof(struct rte_mbuf, data_off) != 2);
+-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, nb_segs) -
+ 				offsetof(struct rte_mbuf, data_off) != 4);
+-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, port) -
++	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, nb_segs) -
+ 				offsetof(struct rte_mbuf, data_off) != 6);
++	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, port) -
++				offsetof(struct rte_mbuf, data_off) != 8);
+ 	mb_def.nb_segs = 1;
+ 	mb_def.data_off = RTE_PKTMBUF_HEADROOM + nix_get_data_off(dev);
+ 	mb_def.port = port_id;
+@@ -679,7 +679,7 @@
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_off) !=
+ 			 offsetof(struct rte_mbuf, buf_iova) + 8);
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, ol_flags) !=
+-			 offsetof(struct rte_mbuf, buf_iova) + 16);
++			 offsetof(struct rte_mbuf, buf_iova) + 24);
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, pkt_len) !=
+ 			 offsetof(struct rte_mbuf, ol_flags) + 12);
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, tx_offload) !=
+diff --git a/drivers/net/octeontx2/otx2_ethdev.h b/drivers/net/octeontx2/otx2_ethdev.h
+index 0fbf68b..89375a4 100644
+--- a/drivers/net/octeontx2/otx2_ethdev.h
++++ b/drivers/net/octeontx2/otx2_ethdev.h
+@@ -432,7 +432,7 @@ int otx2_nix_set_mc_addr_list(struct rte_eth_dev *eth_dev,
+ 			      uint32_t nb_mc_addr);
+ 
+ /* MTU */
+-int otx2_nix_mtu_set(struct rte_eth_dev *eth_dev, uint16_t mtu);
++int otx2_nix_mtu_set(struct rte_eth_dev *eth_dev, uint32_t mtu);
+ int otx2_nix_recalc_mtu(struct rte_eth_dev *eth_dev);
+ 
+ /* Link */
+diff --git a/drivers/net/octeontx2/otx2_ethdev_ops.c b/drivers/net/octeontx2/otx2_ethdev_ops.c
+index 80ac2b9..14f2be6 100644
+--- a/drivers/net/octeontx2/otx2_ethdev_ops.c
++++ b/drivers/net/octeontx2/otx2_ethdev_ops.c
+@@ -8,7 +8,7 @@
+ #include "otx2_ethdev.h"
+ 
+ int
+-otx2_nix_mtu_set(struct rte_eth_dev *eth_dev, uint16_t mtu)
++otx2_nix_mtu_set(struct rte_eth_dev *eth_dev, uint32_t mtu)
+ {
+ 	uint32_t buffsz, frame_size = mtu + NIX_L2_OVERHEAD;
+ 	struct otx2_eth_dev *dev = otx2_eth_pmd_priv(eth_dev);
+diff --git a/drivers/net/qede/qede_ethdev.c b/drivers/net/qede/qede_ethdev.c
+index 1542073..89815f4 100644
+--- a/drivers/net/qede/qede_ethdev.c
++++ b/drivers/net/qede/qede_ethdev.c
+@@ -2252,7 +2252,7 @@ static int qede_rss_reta_query(struct rte_eth_dev *eth_dev,
+ 
+ 
+ 
+-static int qede_set_mtu(struct rte_eth_dev *dev, uint16_t mtu)
++static int qede_set_mtu(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	struct qede_dev *qdev = QEDE_INIT_QDEV(dev);
+ 	struct ecore_dev *edev = QEDE_INIT_EDEV(qdev);
+diff --git a/drivers/net/sfc/sfc_ef10_tx.c b/drivers/net/sfc/sfc_ef10_tx.c
+index b91c806..aabb201 100644
+--- a/drivers/net/sfc/sfc_ef10_tx.c
++++ b/drivers/net/sfc/sfc_ef10_tx.c
+@@ -258,8 +258,8 @@ struct sfc_ef10_txq {
+ 	 */
+ 
+ /** Maximum length of the mbuf segment data */
+-#define SFC_MBUF_SEG_LEN_MAX		UINT16_MAX
+-	RTE_BUILD_BUG_ON(sizeof(m->data_len) != 2);
++#define SFC_MBUF_SEG_LEN_MAX		UINT32_MAX
++	RTE_BUILD_BUG_ON(sizeof(m->data_len) != 4);
+ 
+ 	/*
+ 	 * Each segment is already counted once below.  So, calculate
+diff --git a/drivers/net/sfc/sfc_ethdev.c b/drivers/net/sfc/sfc_ethdev.c
+index 6b3c49a..6d9f554 100644
+--- a/drivers/net/sfc/sfc_ethdev.c
++++ b/drivers/net/sfc/sfc_ethdev.c
+@@ -945,7 +945,7 @@
+ }
+ 
+ static int
+-sfc_dev_set_mtu(struct rte_eth_dev *dev, uint16_t mtu)
++sfc_dev_set_mtu(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	struct sfc_adapter *sa = sfc_adapter_by_eth_dev(dev);
+ 	size_t pdu = EFX_MAC_PDU(mtu);
+diff --git a/drivers/net/tap/rte_eth_tap.c b/drivers/net/tap/rte_eth_tap.c
+index 7081ae2..af9879b 100644
+--- a/drivers/net/tap/rte_eth_tap.c
++++ b/drivers/net/tap/rte_eth_tap.c
+@@ -424,7 +424,8 @@ struct ipc_queues {
+ 			(*rxq->iovecs)[mbuf->nb_segs].iov_base =
+ 				(char *)buf->buf_addr + data_off;
+ 
+-			seg->data_len = RTE_MIN(seg->buf_len - data_off, len);
++			seg->data_len = RTE_MIN((unsigned)seg->buf_len -
++				(unsigned)data_off, (unsigned)len);
+ 			seg->data_off = data_off;
+ 
+ 			len -= seg->data_len;
+@@ -1548,7 +1549,7 @@ struct ipc_queues {
+ }
+ 
+ static int
+-tap_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
++tap_mtu_set(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	struct pmd_internals *pmd = dev->data->dev_private;
+ 	struct ifreq ifr = { .ifr_mtu = mtu };
+diff --git a/drivers/net/tap/rte_eth_tap.h b/drivers/net/tap/rte_eth_tap.h
+index 8d6d53d..357dbcf 100644
+--- a/drivers/net/tap/rte_eth_tap.h
++++ b/drivers/net/tap/rte_eth_tap.h
+@@ -57,7 +57,7 @@ struct rx_queue {
+ 
+ struct tx_queue {
+ 	int type;                       /* Type field - TUN|TAP */
+-	uint16_t *mtu;                  /* Pointer to MTU from dev_data */
++	uint32_t *mtu;                  /* Pointer to MTU from dev_data */
+ 	uint16_t csum:1;                /* Enable checksum offloading */
+ 	struct pkt_stats stats;         /* Stats for this TX queue */
+ 	struct rte_gso_ctx gso_ctx;     /* GSO context */
+diff --git a/drivers/net/thunderx/nicvf_ethdev.c b/drivers/net/thunderx/nicvf_ethdev.c
+index bfda0ab..868d92d 100644
+--- a/drivers/net/thunderx/nicvf_ethdev.c
++++ b/drivers/net/thunderx/nicvf_ethdev.c
+@@ -161,7 +161,7 @@ static void nicvf_vf_stop(struct rte_eth_dev *dev, struct nicvf *nic,
+ }
+ 
+ static int
+-nicvf_dev_set_mtu(struct rte_eth_dev *dev, uint16_t mtu)
++nicvf_dev_set_mtu(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	struct nicvf *nic = nicvf_pmd_priv(dev);
+ 	uint32_t buffsz, frame_size = mtu + NIC_HW_L2_OVERHEAD;
+@@ -1257,14 +1257,13 @@ static void nicvf_vf_stop(struct rte_eth_dev *dev, struct nicvf *nic,
+ 	RTE_BUILD_BUG_ON(sizeof(union mbuf_initializer) != 8);
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, data_off) % 8 != 0);
+ 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, refcnt) -
+-				offsetof(struct rte_mbuf, data_off) != 2);
+-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, nb_segs) -
+ 				offsetof(struct rte_mbuf, data_off) != 4);
+-	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, port) -
++	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, nb_segs) -
+ 				offsetof(struct rte_mbuf, data_off) != 6);
+ 	RTE_BUILD_BUG_ON(offsetof(struct nicvf_rxq, rxq_fastpath_data_end) -
+ 				offsetof(struct nicvf_rxq,
+ 					rxq_fastpath_data_start) > 128);
++
+ 	mb_def.nb_segs = 1;
+ 	mb_def.data_off = RTE_PKTMBUF_HEADROOM + (nic->skip_bytes);
+ 	mb_def.port = rxq->port_id;
+diff --git a/drivers/net/virtio/virtio_ethdev.c b/drivers/net/virtio/virtio_ethdev.c
+index 37766cb..51d8cde 100644
+--- a/drivers/net/virtio/virtio_ethdev.c
++++ b/drivers/net/virtio/virtio_ethdev.c
+@@ -860,7 +860,7 @@ struct rte_virtio_xstats_name_off {
+ 
+ #define VLAN_TAG_LEN           4    /* 802.3ac tag (not DMA'd) */
+ static int
+-virtio_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
++virtio_mtu_set(struct rte_eth_dev *dev, uint32_t mtu)
+ {
+ 	struct virtio_hw *hw = dev->data->dev_private;
+ 	uint32_t ether_hdr_len = RTE_ETHER_HDR_LEN + VLAN_TAG_LEN +
+diff --git a/drivers/net/virtio/virtio_ethdev.h b/drivers/net/virtio/virtio_ethdev.h
+index febaf17..85fffdb 100644
+--- a/drivers/net/virtio/virtio_ethdev.h
++++ b/drivers/net/virtio/virtio_ethdev.h
+@@ -17,7 +17,7 @@
+ #define VIRTIO_MAX_TX_QUEUES 128U
+ #define VIRTIO_MAX_MAC_ADDRS 64
+ #define VIRTIO_MIN_RX_BUFSIZE 64
+-#define VIRTIO_MAX_RX_PKTLEN  9728U
++#define VIRTIO_MAX_RX_PKTLEN    66048U
+ 
+ /* Features desired/implemented by this driver. */
+ #define VIRTIO_PMD_DEFAULT_GUEST_FEATURES	\
+diff --git a/drivers/net/virtio/virtio_rxtx.c b/drivers/net/virtio/virtio_rxtx.c
+index 0604105..21a9500 100644
+--- a/drivers/net/virtio/virtio_rxtx.c
++++ b/drivers/net/virtio/virtio_rxtx.c
+@@ -527,8 +527,9 @@
+ virtio_tso_fix_cksum(struct rte_mbuf *m)
+ {
+ 	/* common case: header is not fragmented */
+-	if (likely(rte_pktmbuf_data_len(m) >= m->l2_len + m->l3_len +
+-			m->l4_len)) {
++	if (likely((uint32_t)rte_pktmbuf_data_len(m) >=
++			(uint32_t)(m->l2_len + m->l3_len +
++			m->l4_len))) {
+ 		struct rte_ipv4_hdr *iph;
+ 		struct rte_ipv6_hdr *ip6h;
+ 		struct rte_tcp_hdr *th;
+@@ -1182,15 +1183,17 @@
+ 			 * In case of SCTP, this will be wrong since it's a CRC
+ 			 * but there's nothing we can do.
+ 			 */
+-			uint16_t csum = 0, off;
++			uint16_t csum = 0;
++			uint32_t off;
+ 
+ 			rte_raw_cksum_mbuf(m, hdr->csum_start,
+ 				rte_pktmbuf_pkt_len(m) - hdr->csum_start,
+ 				&csum);
+ 			if (likely(csum != 0xffff))
+ 				csum = ~csum;
+-			off = hdr->csum_offset + hdr->csum_start;
+-			if (rte_pktmbuf_data_len(m) >= off + 1)
++			off = (uint32_t) (hdr->csum_offset + hdr->csum_start);
++			if ((uint32_t)rte_pktmbuf_data_len(m) >=
++			     (uint32_t)(off + 1))
+ 				*rte_pktmbuf_mtod_offset(m, uint16_t *,
+ 					off) = csum;
+ 		}
+@@ -1278,7 +1281,7 @@
+ 		rxm->vlan_tci = 0;
+ 
+ 		rxm->pkt_len = (uint32_t)(len[i] - hdr_size);
+-		rxm->data_len = (uint16_t)(len[i] - hdr_size);
++		rxm->data_len = (uint32_t)(len[i] - hdr_size);
+ 
+ 		hdr = (struct virtio_net_hdr *)((char *)rxm->buf_addr +
+ 			RTE_PKTMBUF_HEADROOM - hdr_size);
+diff --git a/drivers/net/vmxnet3/vmxnet3_ethdev.c b/drivers/net/vmxnet3/vmxnet3_ethdev.c
+index c6e11ad..87c5a50 100644
+--- a/drivers/net/vmxnet3/vmxnet3_ethdev.c
++++ b/drivers/net/vmxnet3/vmxnet3_ethdev.c
+@@ -87,7 +87,7 @@ static int vmxnet3_dev_info_get(struct rte_eth_dev *dev,
+ 				struct rte_eth_dev_info *dev_info);
+ static const uint32_t *
+ vmxnet3_dev_supported_ptypes_get(struct rte_eth_dev *dev);
+-static int vmxnet3_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu);
++static int vmxnet3_dev_mtu_set(struct rte_eth_dev *dev, uint32_t mtu);
+ static int vmxnet3_dev_vlan_filter_set(struct rte_eth_dev *dev,
+ 				       uint16_t vid, int on);
+ static int vmxnet3_dev_vlan_offload_set(struct rte_eth_dev *dev, int mask);
+@@ -1216,7 +1216,7 @@ static int eth_vmxnet3_pci_remove(struct rte_pci_device *pci_dev)
+ }
+ 
+ static int
+-vmxnet3_dev_mtu_set(struct rte_eth_dev *dev, __rte_unused uint16_t mtu)
++vmxnet3_dev_mtu_set(struct rte_eth_dev *dev, __rte_unused uint32_t mtu)
+ {
+ 	if (dev->data->dev_started) {
+ 		PMD_DRV_LOG(ERR, "Port %d must be stopped to configure MTU",
+diff --git a/lib/librte_eal/linux/include/rte_kni_common.h b/lib/librte_eal/linux/include/rte_kni_common.h
+index 7313ef5..505a776 100644
+--- a/lib/librte_eal/linux/include/rte_kni_common.h
++++ b/lib/librte_eal/linux/include/rte_kni_common.h
+@@ -76,7 +76,7 @@ struct rte_kni_fifo {
+ struct rte_kni_mbuf {
+ 	void *buf_addr __attribute__((__aligned__(RTE_CACHE_LINE_SIZE)));
+ 	uint64_t buf_physaddr;
+-	uint16_t data_off;      /**< Start address of data in segment buffer. */
++	uint32_t data_off;      /**< Start address of data in segment buffer. */
+ 	char pad1[2];
+ 	uint16_t nb_segs;       /**< Number of segments. */
+ 	char pad4[2];
+@@ -87,6 +87,7 @@ struct rte_kni_mbuf {
+ 
+ 	/* fields on second cache line */
+ 	char pad3[8] __attribute__((__aligned__(RTE_CACHE_LINE_MIN_SIZE)));
++	char pad5[64];
+ 	void *pool;
+ 	void *next;             /**< Physical address of next mbuf in kernel. */
+ };
+diff --git a/lib/librte_ethdev/rte_ethdev.c b/lib/librte_ethdev/rte_ethdev.c
+index 72aed59..b675216 100644
+--- a/lib/librte_ethdev/rte_ethdev.c
++++ b/lib/librte_ethdev/rte_ethdev.c
+@@ -2985,7 +2985,7 @@ struct rte_eth_dev *
+ 	dev_info->tx_desc_lim = lim;
+ 	dev_info->device = dev->device;
+ 	dev_info->min_mtu = RTE_ETHER_MIN_MTU;
+-	dev_info->max_mtu = UINT16_MAX;
++	dev_info->max_mtu = UINT32_MAX;
+ 
+ 	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->dev_infos_get, -ENOTSUP);
+ 	diag = (*dev->dev_ops->dev_infos_get)(dev, dev_info);
+@@ -3135,7 +3135,7 @@ struct rte_eth_dev *
+ }
+ 
+ int
+-rte_eth_dev_get_mtu(uint16_t port_id, uint16_t *mtu)
++rte_eth_dev_get_mtu(uint16_t port_id, uint32_t *mtu)
+ {
+ 	struct rte_eth_dev *dev;
+ 
+@@ -3147,7 +3147,7 @@ struct rte_eth_dev *
+ }
+ 
+ int
+-rte_eth_dev_set_mtu(uint16_t port_id, uint16_t mtu)
++rte_eth_dev_set_mtu(uint16_t port_id, uint32_t mtu)
+ {
+ 	int ret;
+ 	struct rte_eth_dev_info dev_info;
+diff --git a/lib/librte_ethdev/rte_ethdev.h b/lib/librte_ethdev/rte_ethdev.h
+index 0f6d053..cdf26f2 100644
+--- a/lib/librte_ethdev/rte_ethdev.h
++++ b/lib/librte_ethdev/rte_ethdev.h
+@@ -1243,8 +1243,8 @@ struct rte_eth_dev_info {
+ 	const char *driver_name; /**< Device Driver name. */
+ 	unsigned int if_index; /**< Index to bound host interface, or 0 if none.
+ 		Use if_indextoname() to translate into an interface name. */
+-	uint16_t min_mtu;	/**< Minimum MTU allowed */
+-	uint16_t max_mtu;	/**< Maximum MTU allowed */
++	uint32_t min_mtu;	/**< Minimum MTU allowed */
++	uint32_t max_mtu;	/**< Maximum MTU allowed */
+ 	const uint32_t *dev_flags; /**< Device flags */
+ 	uint32_t min_rx_bufsize; /**< Minimum size of RX buffer. */
+ 	uint32_t max_rx_pktlen; /**< Maximum configurable length of RX pkt. */
+@@ -2687,7 +2687,7 @@ int rte_eth_dev_set_ptypes(uint16_t port_id, uint32_t ptype_mask,
+  *   - (0) if successful.
+  *   - (-ENODEV) if *port_id* invalid.
+  */
+-int rte_eth_dev_get_mtu(uint16_t port_id, uint16_t *mtu);
++int rte_eth_dev_get_mtu(uint16_t port_id, uint32_t *mtu);
+ 
+ /**
+  * Change the MTU of an Ethernet device.
+@@ -2706,7 +2706,7 @@ int rte_eth_dev_set_ptypes(uint16_t port_id, uint32_t ptype_mask,
+  *     when the mtu is set using dev->dev_ops->mtu_set.
+  *   - (-EBUSY) if operation is not allowed when the port is running
+  */
+-int rte_eth_dev_set_mtu(uint16_t port_id, uint16_t mtu);
++int rte_eth_dev_set_mtu(uint16_t port_id, uint32_t mtu);
+ 
+ /**
+  * Enable/Disable hardware filtering by an Ethernet device of received
+diff --git a/lib/librte_ethdev/rte_ethdev_core.h b/lib/librte_ethdev/rte_ethdev_core.h
+index 32407dd..9865db6 100644
+--- a/lib/librte_ethdev/rte_ethdev_core.h
++++ b/lib/librte_ethdev/rte_ethdev_core.h
+@@ -312,7 +312,7 @@ typedef void (*eth_txq_info_get_t)(struct rte_eth_dev *dev,
+ typedef int (*eth_burst_mode_get_t)(struct rte_eth_dev *dev,
+ 	uint16_t queue_id, struct rte_eth_burst_mode *mode);
+ 
+-typedef int (*mtu_set_t)(struct rte_eth_dev *dev, uint16_t mtu);
++typedef int (*mtu_set_t)(struct rte_eth_dev *dev, uint32_t mtu);
+ /**< @internal Set MTU. */
+ 
+ typedef int (*vlan_filter_set_t)(struct rte_eth_dev *dev,
+@@ -838,7 +838,7 @@ struct rte_eth_dev_data {
+ 
+ 	struct rte_eth_link dev_link;   /**< Link-level information & status. */
+ 	struct rte_eth_conf dev_conf;   /**< Configuration applied to device. */
+-	uint16_t mtu;                   /**< Maximum Transmission Unit. */
++	uint32_t mtu;                   /**< Maximum Transmission Unit. */
+ 	uint32_t min_rx_buf_size;
+ 			/**< Common RX buffer size handled by all queues. */
+ 
+diff --git a/lib/librte_mbuf/rte_mbuf.c b/lib/librte_mbuf/rte_mbuf.c
+index 220eb2f..54f1efc 100644
+--- a/lib/librte_mbuf/rte_mbuf.c
++++ b/lib/librte_mbuf/rte_mbuf.c
+@@ -42,7 +42,7 @@
+ {
+ 	struct rte_pktmbuf_pool_private *user_mbp_priv, *mbp_priv;
+ 	struct rte_pktmbuf_pool_private default_mbp_priv;
+-	uint16_t roomsz;
++	uint32_t roomsz;
+ 
+ 	RTE_ASSERT(mp->elt_size >= sizeof(struct rte_mbuf));
+ 
+@@ -90,17 +90,18 @@
+ 
+ 	RTE_ASSERT(RTE_ALIGN(priv_size, RTE_MBUF_PRIV_ALIGN) == priv_size);
+ 	RTE_ASSERT(mp->elt_size >= mbuf_size);
+-	RTE_ASSERT(buf_len <= UINT16_MAX);
++	RTE_ASSERT(buf_len <= UINT32_MAX);
+ 
+ 	memset(m, 0, mbuf_size);
+ 	/* start of buffer is after mbuf structure and priv data */
+ 	m->priv_size = priv_size;
+ 	m->buf_addr = (char *)m + mbuf_size;
+ 	m->buf_iova = rte_mempool_virt2iova(m) + mbuf_size;
+-	m->buf_len = (uint16_t)buf_len;
++	m->buf_len = buf_len;
+ 
+ 	/* keep some headroom between start of buffer and data */
+-	m->data_off = RTE_MIN(RTE_PKTMBUF_HEADROOM, (uint16_t)m->buf_len);
++	m->data_off = RTE_MIN((uint32_t)RTE_PKTMBUF_HEADROOM,
++		(uint32_t)m->buf_len);
+ 
+ 	/* init some constant fields */
+ 	m->pool = mp;
+@@ -224,7 +225,7 @@ struct rte_pktmbuf_extmem_init_ctx {
+ /* Helper to create a mbuf pool with given mempool ops name*/
+ struct rte_mempool *
+ rte_pktmbuf_pool_create_by_ops(const char *name, unsigned int n,
+-	unsigned int cache_size, uint16_t priv_size, uint16_t data_room_size,
++	unsigned int cache_size, uint16_t priv_size, uint32_t data_room_size,
+ 	int socket_id, const char *ops_name)
+ {
+ 	struct rte_mempool *mp;
+@@ -276,7 +277,7 @@ struct rte_mempool *
+ /* helper to create a mbuf pool */
+ struct rte_mempool *
+ rte_pktmbuf_pool_create(const char *name, unsigned int n,
+-	unsigned int cache_size, uint16_t priv_size, uint16_t data_room_size,
++	unsigned cache_size, uint16_t priv_size, uint32_t data_room_size,
+ 	int socket_id)
+ {
+ 	return rte_pktmbuf_pool_create_by_ops(name, n, cache_size, priv_size,
+diff --git a/lib/librte_mbuf/rte_mbuf.h b/lib/librte_mbuf/rte_mbuf.h
+index f8e492e..60e71d7 100644
+--- a/lib/librte_mbuf/rte_mbuf.h
++++ b/lib/librte_mbuf/rte_mbuf.h
+@@ -301,7 +301,7 @@
+  * appended after the mempool structure (in private data).
+  */
+ struct rte_pktmbuf_pool_private {
+-	uint16_t mbuf_data_room_size; /**< Size of data space in each mbuf. */
++	uint32_t mbuf_data_room_size; /**< Size of data space in each mbuf. */
+ 	uint16_t mbuf_priv_size;      /**< Size of private area in each mbuf. */
+ 	uint32_t flags; /**< reserved for future use. */
+ };
+@@ -514,7 +514,6 @@ struct rte_pktmbuf_pool_private {
+ 		rte_prefetch0(m);               \
+ } while (0)
+ 
+-
+ /**
+  * Sanity checks on an mbuf.
+  *
+@@ -692,7 +691,7 @@ void rte_pktmbuf_init(struct rte_mempool *mp, void *opaque_arg,
+  */
+ struct rte_mempool *
+ rte_pktmbuf_pool_create(const char *name, unsigned n,
+-	unsigned cache_size, uint16_t priv_size, uint16_t data_room_size,
++	unsigned cache_size, uint16_t priv_size, uint32_t data_room_size,
+ 	int socket_id);
+ 
+ /**
+@@ -734,7 +733,7 @@ struct rte_mempool *
+  */
+ struct rte_mempool *
+ rte_pktmbuf_pool_create_by_ops(const char *name, unsigned int n,
+-	unsigned int cache_size, uint16_t priv_size, uint16_t data_room_size,
++	unsigned int cache_size, uint16_t priv_size, uint32_t data_room_size,
+ 	int socket_id, const char *ops_name);
+ 
+ /** A structure that describes the pinned external buffer segment. */
+@@ -805,7 +804,7 @@ struct rte_mempool *
+  * @return
+  *   The data room size of mbufs stored in this mempool.
+  */
+-static inline uint16_t
++static inline uint32_t
+ rte_pktmbuf_data_room_size(struct rte_mempool *mp)
+ {
+ 	struct rte_pktmbuf_pool_private *mbp_priv;
+@@ -845,8 +844,8 @@ struct rte_mempool *
+  */
+ static inline void rte_pktmbuf_reset_headroom(struct rte_mbuf *m)
+ {
+-	m->data_off = (uint16_t)RTE_MIN((uint16_t)RTE_PKTMBUF_HEADROOM,
+-					(uint16_t)m->buf_len);
++	m->data_off = RTE_MIN((uint32_t)RTE_PKTMBUF_HEADROOM,
++					(uint32_t)m->buf_len);
+ }
+ 
+ /**
+@@ -1269,7 +1268,7 @@ static inline void rte_pktmbuf_detach(struct rte_mbuf *m)
+ 	m->priv_size = priv_size;
+ 	m->buf_addr = (char *)m + mbuf_size;
+ 	m->buf_iova = rte_mempool_virt2iova(m) + mbuf_size;
+-	m->buf_len = (uint16_t)buf_len;
++	m->buf_len = buf_len;
+ 	rte_pktmbuf_reset_headroom(m);
+ 	m->data_len = 0;
+ 	m->ol_flags = 0;
+@@ -1499,7 +1498,7 @@ static inline void rte_pktmbuf_refcnt_update(struct rte_mbuf *m, int16_t v)
+  * @return
+  *   The length of the headroom.
+  */
+-static inline uint16_t rte_pktmbuf_headroom(const struct rte_mbuf *m)
++static inline uint32_t rte_pktmbuf_headroom(const struct rte_mbuf *m)
+ {
+ 	__rte_mbuf_sanity_check(m, 0);
+ 	return m->data_off;
+@@ -1513,10 +1512,10 @@ static inline uint16_t rte_pktmbuf_headroom(const struct rte_mbuf *m)
+  * @return
+  *   The length of the tailroom.
+  */
+-static inline uint16_t rte_pktmbuf_tailroom(const struct rte_mbuf *m)
++static inline uint32_t rte_pktmbuf_tailroom(const struct rte_mbuf *m)
+ {
+ 	__rte_mbuf_sanity_check(m, 0);
+-	return (uint16_t)(m->buf_len - rte_pktmbuf_headroom(m) -
++	return (uint32_t)(m->buf_len - rte_pktmbuf_headroom(m) -
+ 			  m->data_len);
+ }
+ 
+diff --git a/lib/librte_mbuf/rte_mbuf_core.h b/lib/librte_mbuf/rte_mbuf_core.h
+index b9a59c8..6fe7b9d 100644
+--- a/lib/librte_mbuf/rte_mbuf_core.h
++++ b/lib/librte_mbuf/rte_mbuf_core.h
+@@ -482,7 +482,7 @@ struct rte_mbuf {
+ 
+ 	/* next 8 bytes are initialised on RX descriptor rearm */
+ 	RTE_MARKER64 rearm_data;
+-	uint16_t data_off;
++	uint32_t data_off;
+ 
+ 	/**
+ 	 * Reference counter. Its size should at least equal to the size
+@@ -546,7 +546,7 @@ struct rte_mbuf {
+ 	};
+ 
+ 	uint32_t pkt_len;         /**< Total pkt len: sum of all segments. */
+-	uint16_t data_len;        /**< Amount of data in segment buffer. */
++	uint32_t data_len;        /**< Amount of data in segment buffer. */
+ 	/** VLAN TCI (CPU order), valid if PKT_RX_VLAN is set. */
+ 	uint16_t vlan_tci;
+ 
+@@ -587,7 +587,7 @@ struct rte_mbuf {
+ 	/** Outer VLAN TCI (CPU order), valid if PKT_RX_QINQ is set. */
+ 	uint16_t vlan_tci_outer;
+ 
+-	uint16_t buf_len;         /**< Length of segment buffer. */
++	uint32_t buf_len;         /**< Length of segment buffer. */
+ 
+ 	/** Valid if PKT_RX_TIMESTAMP is set. The unit and time reference
+ 	 * are not normalized but are always the same for a given port.
+diff --git a/lib/librte_vhost/rte_vhost.h b/lib/librte_vhost/rte_vhost.h
+index 5c72fba..443398d 100644
+--- a/lib/librte_vhost/rte_vhost.h
++++ b/lib/librte_vhost/rte_vhost.h
+@@ -576,7 +576,7 @@ int rte_vhost_driver_callback_register(const char *path,
+  *  -EAGAIN: device not yet started
+  *  -ENOTSUP: device does not support MTU feature
+  */
+-int rte_vhost_get_mtu(int vid, uint16_t *mtu);
++int rte_vhost_get_mtu(int vid, uint32_t *mtu);
+ 
+ /**
+  * Get the numa node from which the virtio net device's memory
+diff --git a/lib/librte_vhost/vhost.c b/lib/librte_vhost/vhost.c
+index 0266318..cd520e2 100644
+--- a/lib/librte_vhost/vhost.c
++++ b/lib/librte_vhost/vhost.c
+@@ -755,7 +755,7 @@
+ }
+ 
+ int
+-rte_vhost_get_mtu(int vid, uint16_t *mtu)
++rte_vhost_get_mtu(int vid, uint32_t *mtu)
+ {
+ 	struct virtio_net *dev = get_device(vid);
+ 
+-- 
+1.8.3.1
+

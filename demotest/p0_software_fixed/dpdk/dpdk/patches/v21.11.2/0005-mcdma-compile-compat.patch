@@ -1,0 +1,105 @@
+diff -ru dpdk-stable/app/meson.build mcdma-dpdk-stable/app/meson.build
+--- dpdk-stable/app/meson.build	2023-01-23 23:23:40.706698976 +0530
++++ mcdma-dpdk-stable/app/meson.build	2023-01-23 22:30:37.726793226 +0530
+@@ -21,6 +21,7 @@
+ ]
+ 
+ default_cflags = machine_args + ['-DALLOW_EXPERIMENTAL_API']
++default_cflags += ['-Wno-incompatible-pointer-types']
+ default_ldflags = []
+ if get_option('default_library') == 'static' and not is_windows
+     default_ldflags += ['-Wl,--export-dynamic']
+Only in mcdma-dpdk-stable/buildtools: __pycache__
+diff -ru dpdk-stable/drivers/meson.build mcdma-dpdk-stable/drivers/meson.build
+--- dpdk-stable/drivers/meson.build	2023-01-23 23:23:40.826698973 +0530
++++ mcdma-dpdk-stable/drivers/meson.build	2023-01-23 22:25:26.350802446 +0530
+@@ -45,6 +45,9 @@
+ default_cflags = machine_args
+ default_cflags += ['-DALLOW_EXPERIMENTAL_API']
+ default_cflags += ['-DALLOW_INTERNAL_API']
++default_cflags += ['-Wno-incompatible-pointer-types',
++                   '-Wno-sign-compare',
++                   '-Wno-pointer-arith']
+ 
+ if cc.has_argument('-Wno-format-truncation')
+     default_cflags += '-Wno-format-truncation'
+diff -ru dpdk-stable/drivers/net/mcdma/mcdma_rxtx.c mcdma-dpdk-stable/drivers/net/mcdma/mcdma_rxtx.c
+--- dpdk-stable/drivers/net/mcdma/mcdma_rxtx.c	2023-01-23 23:23:41.014698967 +0530
++++ mcdma-dpdk-stable/drivers/net/mcdma/mcdma_rxtx.c	2023-01-23 22:35:37.274784356 +0530
+@@ -676,7 +676,7 @@
+ 		rte_wmb();
+ 		ret = ifc_mcdma_descq_queue_submit(rxq);
+ 		while (ret) {
+-			pthread_yield();
++			sched_yield();
+ 			ret = ifc_mcdma_descq_queue_submit(rxq);
+ 			rxq->stats.failed_attempts++;
+ 		}
+@@ -827,7 +827,7 @@
+ 	if (count) {
+ 		ret = ifc_mcdma_descq_queue_submit(txq);
+ 		while (ret) {
+-			pthread_yield();
++			sched_yield();
+ 			ret = ifc_mcdma_descq_queue_submit(txq);
+ 			txq->stats.failed_attempts++;
+ 		}
+diff -ru dpdk-stable/lib/vhost/meson.build mcdma-dpdk-stable/lib/vhost/meson.build
+--- dpdk-stable/lib/vhost/meson.build	2023-01-23 23:23:41.002698967 +0530
++++ mcdma-dpdk-stable/lib/vhost/meson.build	2023-01-23 22:33:29.150788150 +0530
+@@ -17,6 +17,7 @@
+ endif
+ dpdk_conf.set('RTE_LIBRTE_VHOST_POSTCOPY', cc.has_header('linux/userfaultfd.h'))
+ cflags += '-fno-strict-aliasing'
++cflags += '-Wno-sign-compare'
+ sources = files(
+         'fd_man.c',
+         'iotlb.c',
+--- dpdk-stable/meson.build     2023-01-24 11:05:41.863903739 +0530
++++ dpdk-stable/meson.build 2023-01-24 11:08:25.707898888 +0530
+@@ -142,3 +142,12 @@
+     output_message += drv + ':\t' + reason + '\n\t'
+ endforeach
+ message(output_message + '\n')
++
++
++#Used for copy rand.conf to build dir when Rand flag is enabled or disabled.
++src = join_paths(meson.current_source_dir(), 'examples/mcdma-test/perfq/rand.conf')
++dest = join_paths(meson.current_build_dir(), 'examples/mcdma-test/perfq/')
++message('copying @0@ to @1@ ...'.format(src, dest))
++run_command('cp', src, dest, check: false)
++
++
+diff -rub dpdk-stable/config/rte_config.h dpdk-stable_new/config/rte_config.h
+--- dpdk-stable/config/rte_config.h     2023-03-01 01:13:00.239790216 +0530
++++ dpdk-stable_new/config/rte_config.h 2023-03-01 01:25:23.423768210 +0530
+@@ -34,7 +34,7 @@
+ #define RTE_MAX_MEM_MB_PER_LIST 32768
+ #define RTE_MAX_MEMSEG_PER_TYPE 32768
+ #define RTE_MAX_MEM_MB_PER_TYPE 65536
+-#define RTE_MAX_MEMZONE 2560
++#define RTE_MAX_MEMZONE 5120
+ #define RTE_MAX_TAILQ 32
+ #define RTE_LOG_DP_LEVEL RTE_LOG_INFO
+ #define RTE_BACKTRACE 1
+diff -rub dpdk-stable/lib/kni/meson.build dpdk-stable-new/lib/kni/meson.build
+--- dpdk-stable/lib/kni/meson.build     2023-07-14 15:17:49.962234082 +0530
++++ dpdk-stable-new/lib/kni/meson.build 2023-07-14 15:24:58.506221392 +0530
+@@ -12,5 +12,5 @@
+     reason = 'only supported on 64-bit Linux'
+ endif
+ sources = files('rte_kni.c')
+-headers = files('rte_kni.h', 'rte_kni_common.h')
++headers = files('rte_kni.h', 'rte_kni_common.h', 'rte_kni_fifo.h')
+ deps += ['ethdev', 'pci']
+diff -rub dpdk-stable/lib/kni/rte_kni_fifo.h dpdk-stable-new/lib/kni/rte_kni_fifo.h
+--- dpdk-stable/lib/kni/rte_kni_fifo.h  2023-07-14 15:18:57.822232072 +0530
++++ dpdk-stable-new/lib/kni/rte_kni_fifo.h      2023-07-14 15:26:18.866219013 +0530
+@@ -15,6 +15,7 @@
+  * @param value
+  *   Data value.
+  */
++#include <rte_kni_common.h>
+ #ifdef RTE_USE_C11_MEM_MODEL
+ #define __KNI_LOAD_ACQUIRE(src) ({                         \
+                __atomic_load_n((src), __ATOMIC_ACQUIRE);           \

@@ -1,0 +1,51 @@
+# Multi Channel DMA
+
+## Software version
+
+ - Release version : IFC-MQDMA-2025-02-18
+
+## Release
+
+This package contains following components
+ - user space driver
+ 	- software/kernel/driver/kmod/mqdma-driver
+		PCIe end point driver registers device to host and responsible
+		for registering processing interrupts
+
+ 	- software/user/libmqdma/
+		User space library which should be linked to application to perform
+        	IO transactions
+		Please check user/readme.md for further configuration details
+
+ 	- software/user/cli/perfq_app
+		Multi threaded Test application, that demonstrates the usage and
+		featuers of DMA Please check user/cli/perfq_app/readme.md for
+		further info and usage
+
+	 - software/user/cli/sample
+		Sample application (Not multi threaded), that demonstrates the usage
+		of DMA APIs.
+
+ - DPDK based poll mode driver
+ 	- software/dpdk/dpdk/
+		DPDK based poll mode driver and corresponding test application
+		which can be used to perform DMA operations
+
+ 	- software/dpdk/dpdk/patches/v20.05-rc1
+		patches to integrate DPDK PMD with DPDK standard build and to
+		enable and register MSIX interrupt with igb_uio module
+
+ 	- software/dpdk/dpdk/examples/mcdma-test/perfq
+		Multi threaded DPDK based Test application, that demonstrates
+		the usage and featuers of McDMA PMD
+
+ - kernel mode driver
+ 	- software/kernel/driver/kmod/mqdma-driver
+		McDMA kernel mode driver which performs DMA operations by
+		using netdev interface
+
+
+Plese refer installation document released along with this packet to proceed with
+installation
+
+## Open and known issues

@@ -1,0 +1,101 @@
+# MQDMA Configuration
+
+## Configuration
+
+Following are the configurable parameters. These can be configured
+by updating the header file
+
+ - HW Interface
+
+   Currently, HW Support AVMM and AVST Interfaces. Based on the configured
+   Interface, library populates the descriptors. In case of AVMM, library populates
+   source and destination addressed  in descriptor.
+
+Following parameters can be configured by updating common/include/ifc_libmqdma.h file
+
+ - DMA Completion reporting mechanism
+
+   At init time, driver configures this parameter to hardware. based on this
+   parameter FPGA will update the completion info in configured PCIe hostst memory
+   or by using MSIX interrupt. This configuration can be done by updating MACRO
+   called IFC_CONFIG_QDMA_COMPL_PROC
+
+   Allowed values:
+       CONFIG_QDMA_QUEUE_WB
+       CONFIG_QDMA_QUEUE_MSIX
+
+   Please check common/include/ifc_libmqdma.h for further info
+
+ - Number of descriptor pages per queue
+
+   Based on required throughput and availability of memory, user can configure
+   number of descriptors can be allocated to queue at the time of initilization.
+   This should be done in the order of pages. current descriptor size is 32
+   bytes.
+
+   Number of pages = (4096) / (Number of descritpros * 32 )
+
+   For E.g. if user needs 256 descriptors per queue
+	#define IFC_CONFIG_QDMA_NUM_DESC_PAGES_PER_QUEUE 2
+
+ - Batch Delay
+
+   At init time, as part of queue init library programs this register. user allowed to
+   update this MACRO with the delay between fetches for descritpros in units of 2ns
+   Default value is 1. (Dealy is 2ns)
+
+ - Number of 1GB huge pages should get allocated
+
+   library allocated the memory from descriptors, channel contexts,
+   data from the huge pages. Number of huge pages can be derived from
+   number of descriptors, data memory size in each descriptors and
+   number of channels.  To configure this parameter, huge page file system
+   and number of huge pages should be enabled at boot time
+
+   Use following formulae for updating number of huge pages
+   required for data memory
+     No of huge pages =       (<no of channels> * <no of queue per channel>
+                                  * <number of pages per queue> * <data buffer size> ) / (1 << 30)
+   We need to add one extra huge page for internal queue and channels contexts and
+   descriptors
+
+ - Data buffer size allocated to descriptor
+
+   Default data-buffer memory size in each descriptor is 1MB (2^20)
+   In case to reduce it, change below macro accordingly.
+
+   BUFFER_MEMORY_BIT_POSITION : exponet of 2, to represent req size
+
+   For eg: if data buffer size 8K,
+      #define BUFFER_MEMORY_BIT_POSITION      13
+
+ - Debug Info
+
+   Based on required debug info following parameters can be set
+   Following are the different debug levels and allowed values
+
+   Debug   - IFC_QDMA_DEBUG,
+   Info    - IFC_QDMA_INFO,
+   Warning -      IFC_QDMA_WARNING,
+   Error   -     IFC_QDMA_ERROR,
+   Emerg   -     IFC_QDMA_EMERG,
+
+   Default log leve: Error
+
+   For E.g. if we want to set debug level to DEBUG, update MACRO like
+            below
+
+   #define IFC_QDMA_DEFAULT_LOG_LEVEL      IFC_QDMA_DEBUG
+
+
+## Integration
+
+   This is the custom library and it exposes the required APIs to perform channel
+   management, DMA transactions, stats monitoring
+   Info of these APIs added in common/include/ifc_libmqdma.h
+
+   To know the usage of these APIs, please refer cli/perfq/perfq_app and corresponding
+   README.md file
+
+## Contact
+TODO
